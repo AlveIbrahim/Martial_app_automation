@@ -27,32 +27,60 @@ export default defineConfig({
   retries: process.env.CI ? 2 : 1,
   workers: process.env.CI ? 1 : undefined,
 
-  reporter: [
-    ['list'],
-    ['html', { open: 'never' }],
-    ['json', { outputFile: 'test-results/results.json' }],
-    // Allure: richer report, and it groups by the @SEC-040 / @MEM-041 tags so a
-    // run reads like the manual sheet. `npm run report:allure` builds and opens
-    // it. Results land in allure-results/ (gitignored) and are cleared on each
-    // run so a deleted test cannot linger in the report.
-    [
-      'allure-playwright',
-      {
-        resultsDir: 'allure-results',
-        detail: true,
-        environmentInfo: {
-          target: process.env.TEST_ENV ?? 'local',
-          node: process.version,
-        },
-      },
-    ],
-  ],
+  /**
+   * `npx playwright test --list` runs every configured reporter's onBegin/onEnd
+   * even though no test actually executes - nothing calls onTestBegin. The
+   * allure-playwright reporter treats that as "every discovered test was
+   * skipped" and writes a fresh zero-duration `skipped` result.json for the
+   * whole suite (allure-framework/allure-js#729). Worse, `--list` never runs
+   * `globalSetup`, so `clean-allure.ts` never gets a chance to wipe those
+   * files - they silently pile on top of a real run's results.
+   *
+   * This is not a hypothetical: something invokes `--list` against this repo
+   * without anyone running a test - most likely the VS Code Playwright
+   * extension refreshing its test explorer. Found 2026-07-31 when a report
+   * generated right after a clean 44/3/2 run showed 44 of those as "skipped",
+   * because the phantom entries were written seconds after the real ones and
+   * Allure treats the chronologically latest attempt as the current result.
+   *
+   * Fix: give `--list` a reporter array with no allure-playwright in it, so it
+   * has nothing to pollute. `npx playwright test --list` still works for
+   * enumerating tests; it just cannot touch allure-results/ anymore.
+   */
+  reporter: process.argv.includes('--list')
+    ? [['list']]
+    : [
+        ['list'],
+        ['html', { open: 'never' }],
+        ['json', { outputFile: 'test-results/results.json' }],
+        // Allure: richer report, and it groups by the @SEC-040 / @MEM-041 tags so a
+        // run reads like the manual sheet. `npm run report:allure` builds and opens
+        // it. Results land in allure-results/ (gitignored) and are cleared on each
+        // run so a deleted test cannot linger in the report.
+        [
+          'allure-playwright',
+          {
+            resultsDir: 'allure-results',
+            detail: true,
+            environmentInfo: {
+              target: process.env.TEST_ENV ?? 'local',
+              node: process.version,
+            },
+          },
+        ],
+      ],
 
   use: {
     baseURL: env.baseURL,
     trace: 'retain-on-failure',
     screenshot: 'only-on-failure',
-    video: 'retain-on-failure',
+    // 'on' keeps every test's video, not just failures, so Allure/the HTML
+    // report can play back a passing run too. Trade-off: a video per test
+    // instead of per failure, so test-results/ and the reports both grow -
+    // 49 clips instead of 3. Drop back to 'retain-on-failure' if that gets
+    // heavy; trace and screenshot stay failure-only on purpose, since a trace
+    // is the debugging tool and there's nothing to debug on a pass.
+    video: 'on',
     // Deterministic rendering. Note the app overrides UI language from the
     // user's profile, so assertions still match EN|FR - see selectors.ts.
     locale: 'en-GB',

@@ -20,7 +20,7 @@
     "test:headed": "playwright test --headed",
     "report": "playwright show-report",
     "typecheck": "tsc --noEmit",
-    "report:allure": "node -e \"require('fs').rmSync('allure-report',{recursive:true,force:true})\" && allure generate allure-results -o allure-report && allure open allure-report"
+    "report:allure": "node scripts/dedupe-allure-results.mjs && node -e \"require('fs').rmSync('allure-report',{recursive:true,force:true})\" && allure generate allure-results -o allure-report && allure open allure-report"
   },
   "devDependencies": {
     "@playwright/test": "^1.56.0",
