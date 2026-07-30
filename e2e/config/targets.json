@@ -1,0 +1,12 @@
+{
+  "local": {
+    "baseURL": "http://localhost:3000",
+    "apiURL": "http://localhost:3000/api",
+    "appId": "martial_frontend"
+  },
+  "dev": {
+    "baseURL": "https://dev-testing.martialapps.com",
+    "apiURL": "https://devapi-testing.martialapps.com/api",
+    "appId": "martial_frontend_testing"
+  }
+}

@@ -1,0 +1,509 @@
+diff --git a/manual-qa/cross-cutting-checks.md b/manual-qa/cross-cutting-checks.md
+index e2672f4..323ba7e 100644
+--- a/manual-qa/cross-cutting-checks.md
++++ b/manual-qa/cross-cutting-checks.md
+@@ -156,7 +156,7 @@ These checks are not tied to one role. They apply across every role and most pag
+ 
+ **Edge cases to try:**
+ - Go offline and try to send a message or save a change. Expected: it fails clearly (it does not silently pretend to succeed), because writes need the connection. Do not file the failure itself; just confirm the app does not lie about saving.
+-- Visit a page you never opened while online, now offline. Expected: the shell still loads but that page's data is empty or errors. Expected, not a bug.
++- Visit a page you never opened while online, now offline. Expected: a branded "You're offline" page appears, with a retry button, and it auto-reloads on its own once the connection comes back. If you instead land on the login screen or a generic browser error, file it. Note: there is still no offline copy of your actual data (clubs/messages/etc.) - only the shell and this fallback page are cached, so this is not a contradiction of step 4 above.
+ - Clear the browser cache, go offline, then reload. Expected: with nothing cached yet, the shell may not load offline. That is fine: caching only helps after you have visited online first.
+ 
+ **Result capture:**
+diff --git a/manual-qa/cross-role-journeys.md b/manual-qa/cross-role-journeys.md
+index 645a334..7cb6754 100644
+--- a/manual-qa/cross-role-journeys.md
++++ b/manual-qa/cross-role-journeys.md
+@@ -10,7 +10,7 @@ Three journeys are realtime (live chat, live notification, live support thread).
+ 
+ ---
+ 
+-## Index - CR-001 to CR-018
++## Index - CR-001 to CR-019
+ 
+ | ID | Title | Sessions | Solo / 2 testers |
+ |---|---|---|---|
+@@ -32,6 +32,7 @@ Three journeys are realtime (live chat, live notification, live support thread).
+ | [CR-016](#cr-016--support-ticket-live-thread) | Support ticket live thread | B (member, user app) + A (admin, admin panel) | **2 testers recommended** (solo fallback) |
+ | [CR-017](#cr-017--secretary-boundary-in-a-shared-club) | Secretary boundary in a shared club | A (secretary) + B (owner) | Solo-with-tabs |
+ | [CR-018](#cr-018--sensei-boundary--settings-probe-known-gap) | Sensei boundary + settings probe | A (sensei) + B (owner) | Solo-with-tabs |
++| [CR-019](#cr-019--group-chat-staff-creates-a-member-participates) | Group chat: staff creates, a member participates | A (staff) + B (member) | Solo-with-tabs |
+ 
+ ---
+ 
+@@ -99,8 +100,9 @@ Three journeys are realtime (live chat, live notification, live support thread).
+ | 2 | **Session B**: tick the terms checkbox, then click **Join Club**. | A green "Request Submitted!" screen confirms the request to join went in and says club staff will review it. |
+ | 3 | **Session A**: open the club → **Members** → **Pending** tab (or click the pending-request card on the Dashboard). | The new applicant appears in the Pending list with their name and the belt they requested. |
+ | 4 | **Session A**: on that pending request, click **Approve**. | A belt-assignment dialog opens, pre-selecting the belt the applicant chose; you can confirm or change it. |
+-| 5 | **Session A**: confirm the belt in the dialog. | A success toast names the member as approved; they move out of Pending into the main **Members** roster. |
+-| 6 | **Session B**: reload the dashboard / open the club. | The member now sees they belong to the club (club appears in their list; no longer "pending"). |
++| 5 | **Session A**: confirm the belt in the dialog. | A success toast names the member as approved; they move out of Pending into the main **Members** roster. Look at their status label in the roster: a member who has not yet logged into the app shows "Invited" (a distinct status, not "Active"). |
++| 6 | **Session B**: reload the dashboard / open the club, then log in properly if you have not already | The member sees they belong to the club (club appears in their list, not pending). |
++| 7 | **Session A**: reload the Members roster after Session B has logged in at least once | The same member's status label should now switch from "Invited" to "Active". |
+ 
+ **Screen-size check:** The join card is a single centered panel that fits a phone width. On Members, the Pending tab and its Approve / Reject buttons stay reachable on a phone; the roster switches to a wider layout at 768px+.
+ 
+@@ -283,6 +285,7 @@ Three journeys are realtime (live chat, live notification, live support thread).
+ | 4 | **Session A**: watch the open thread. | A "typing…" indicator appears for account 2, then **clears on its own after about 3 seconds** of no typing. |
+ | 5 | **Session B**: send a reply. | Session A's open thread shows the reply appear **without refreshing**; the unread badge in Session A's header / list updates too. |
+ | 6 | **Session A**: edit, then delete one of your own sent messages. | Session B's thread reflects the edit and the deletion live (the edited text changes; the deleted message is removed) without a manual refresh. |
++| 7 | **Session A**: turn on the "urgent" (red bell) toggle in the composer and send a message. | It sends normally. If Session B's app is foregrounded, Session B plays an in-app beep and shows a toast on top of the normal live arrival. On a real device/PWA with Session B backgrounded, Session B gets a stronger push (harder to dismiss, extra vibration, plays sound) than a normal message would - see `role-member.md` MEM-024 for the full device-level check. |
+ 
+ **Screen-size check:** Below 768px, Messages is a single full-screen pane (list, then tap into a thread, with a back arrow). At 768px+ it is a split view: conversation list on the left, open thread on the right. Verify the live updates work in both layouts.
+ 
+@@ -539,8 +542,8 @@ Three journeys are realtime (live chat, live notification, live support thread).
+ **Steps:**
+ | # | Action (which session) | Expected result |
+ |---|---|---|
+-| 1 | **Session A**: open club → **Exams** and confirm the exam you just scheduled appears with status Upcoming. | The scheduled exam is listed. |
+-| 2 | **Session A**: open that exam's **Grading** screen. | The candidate(s) appear with a pass / fail / pending toggle. (Grading is open to owner / co-owner / sensei; a secretary would be blocked here.) |
++| 1 | **Session A**: open club → **Exams** and confirm the exam you just scheduled appears with status Upcoming. | The scheduled exam is listed. Status is derived live off the clock (club timezone): it flips to "In Progress" on its own once the scheduled start time passes, even before you open grading. |
++| 2 | **Session A**: open that exam's **Grading** screen (only reachable once status is "In Progress" or later). | The candidate(s) appear with a pass / fail / pending toggle. (Grading is open to owner / co-owner / sensei; a secretary would be blocked here.) |
+ | 3 | **Session A**: mark **at least two examiners present**, set the candidate's result to **Pass**, then **finalize** the grading. | The result saves; a success confirmation appears, and the passed count increases. If fewer than two examiners are present, finalizing is refused with a "at least two examiners must be marked present" message - mark a second examiner present and retry. |
+ | 4 | **Session B** (candidate): reload and open the member's **belt / progress** in the club. | The candidate's belt reflects the promotion: on finalize, every candidate graded Pass is automatically promoted to the exam's target belt. The new belt level shows for the member. |
+ | 5 | **Session A** (owner): open club → **History** → promotion history. | The promotion appears in promotion history with today's date and the candidate. |
+@@ -549,7 +552,7 @@ Three journeys are realtime (live chat, live notification, live support thread).
+ 
+ **Edge cases to try:**
+ - Try to finalize with only **one examiner** marked present → finalizing is blocked ("at least two examiners must be marked present"); no promotion happens.
+-- Try to finalize an exam **dated in the future** → blocked ("the exam has not been conducted yet"); no promotion. (Saving a grading draft is allowed and does NOT promote anyone; only finalize promotes.)
++- Try to finalize an exam **dated in the future** → blocked ("the exam has not been conducted yet"); no promotion. (Saving a grading draft is allowed and does NOT promote anyone; only finalize promotes.) Note: scheduling itself rejects a past date with "Cannot schedule an exam in the past" (this exact wording).
+ - Grade the candidate as **Fail** instead, then finalize → no belt promotion for them; confirm history does not show a promotion for that candidate.
+ - Open the Grading screen as a **secretary** → an access-restricted block (secretary is not in the grading allow-list).
+ - A candidate who has not met eligibility shows an "eligibility not met" note on the grading row → record whether you can still pass them.
+@@ -617,8 +620,9 @@ Three journeys are realtime (live chat, live notification, live support thread).
+ | 2 | **Session B**: type a reply in the ticket and send it. | A "Reply sent" confirmation; your reply appears in the thread. |
+ | 3 | **Session A** (admin panel): open Support Tickets, find that same ticket, and add an admin reply. | The reply posts on the admin side. (Skip if you have no admin login - run the SOLO fallback instead.) |
+ | 4 | **Session B**: do NOT refresh - keep the ticket detail open and watch. | The admin reply appears in the member's thread **without a manual refresh** (live via socket, or within ~30s via the auto-poll). "Updates live" = a new message bubble appears on its own. |
+-| 5 | **Session A** (admin panel): change the ticket **status** (e.g. to Resolved). | The status changes on the admin side. (Skip if you have no admin login.) |
+-| 6 | **Session B**: keep watching. | The status badge / stepper at the top updates to the new status on its own (no manual refresh). |
++| 5 | **Session B**: navigate back to the "My Tickets" list (without refreshing the app), then check this ticket's row | Any "new reply" indicator on that ticket has cleared, since opening the thread in step 4 marked it read server-side. |
++| 6 | **Session A** (admin panel): change the ticket **status** (e.g. to Resolved). | The status changes on the admin side. (Skip if you have no admin login.) |
++| 7 | **Session B**: keep watching. | The status badge / stepper at the top updates to the new status on its own (no manual refresh). |
+ 
+ **Screen-size check:** Support hub quick-action cards scroll horizontally on a phone; the ticket detail is a single scrollable column with the reply box pinned at the bottom on a phone, widening at 768px+.
+ 
+@@ -713,3 +717,40 @@ Three journeys are realtime (live chat, live notification, live support thread).
+ - Screen size tested: [ ] phone (<640) [ ] tablet (~768) [ ] desktop (>=1024)
+ - Language tested: [ ] EN [ ] FR
+ - Notes / bug ID:
++
++---
++
++### CR-019 - Group chat: staff creates, a member participates
++
++- **Status:** FUNCTIONAL
++- **Role(s) & sessions:** Staff (owner, co-owner, sensei, or secretary) (Session A, normal window) + a plain member of the same club (Session B, incognito).
++- **Solo or 2 testers:** Solo-with-tabs.
++- **Route(s) / feature:** Messages (`/dashboard/messages`) in both sessions.
++- **Goal:** Prove staff can create a group chat, add a member to it, and that messages flow live to everyone in the group.
++
++**Preconditions / setup:**
++1. Both accounts belong to the same club.
++2. Session A: log in as staff, open Messages.
++3. Session B (incognito): log in as the member, open Messages.
++
++**Steps:**
++| # | Action (which session) | Expected result |
++|---|---|---|
++| 1 | **Session A**: create a group, name it, and add Session B's account as a member. | The group is created; Session A lands in its thread with Session B listed as a member. |
++| 2 | **Session A**: send a message in the group. | It appears in Session A's thread. |
++| 3 | **Session B**: without refreshing, watch Messages. | The new group conversation appears live in Session B's list with the message from step 2, the same way a live DM would (CR-007). |
++| 4 | **Session B**: open the group and send a reply. | It sends successfully and Session A sees it live. |
++| 5 | **Session B**: look for the "urgent" (red bell) toggle in this group's composer. | It is not shown to a plain member - urgent messages in group chats are staff-only, unlike a 1:1 DM where every member sees the toggle (MEM-024). |
++| 6 | **Session A**: look for the same toggle in the group composer. | It is shown to staff. |
++
++**Screen-size check:** Same split-pane behavior as CR-007 at the 768px boundary.
++
++**Edge cases to try:**
++- Session A removes Session B from the group → Session B loses access to the thread (or it becomes read-only, depending on what the app does - record which).
++- Session A adds a second member to the group → succeeds.
++
++**Result capture:**
++- PASS / FAIL: [ ]
++- Screen size tested: [ ] phone (<640) [ ] tablet (~768) [ ] desktop (>=1024)
++- Language tested: [ ] EN [ ] FR
++- Notes / bug ID:
+diff --git a/manual-qa/role-child.md b/manual-qa/role-child.md
+index b0a8d8b..846ea7e 100644
+--- a/manual-qa/role-child.md
++++ b/manual-qa/role-child.md
+@@ -275,12 +275,12 @@
+ - **Status:** KNOWN-GAP (verify, do not file the reachability)
+ - **Role(s) & sessions:** Child profile (Session A, normal window)
+ - **Solo or 2 testers:** Solo-with-tabs
+-- **Route(s) / feature:** `/dashboard/messages`, `/support`, `/dashboard/household/child/[childId]`
+-- **Goal:** Confirm the known behavior: the child MENU hides Messages, Support, and the child-detail page, but those pages can still be OPENED by typing their address. What we are really checking is that even when opened, the child cannot SEND or SAVE anything in them.
++- **Route(s) / feature:** `/dashboard/messages`, `/support`, `/dashboard/household/child/[childId]`, `/dashboard/household/create`
++- **Goal:** Confirm the known behavior: the child MENU hides Messages, Support, and the child-detail page, but those pages can still be OPENED by typing their address. What we are really checking is that even when opened, the child cannot SEND or SAVE anything in them. One of the four pages tested here (household creation) goes further: the write is blocked server-side with a clear error, not just a silent no-op - that is the one page where you should expect an actual rejection message, not just "nothing happened."
+ 
+ **Preconditions / setup:**
+ 1. You are in child mode (CHD-001 setup) and not currently locked out by screen time.
+-2. Have the addresses ready: the messages page, the support page, and a child-detail page address (the parent sheet PAR-009 shows where a child-detail address comes from).
++2. Have the addresses ready: the messages page, the support page, a child-detail page address (the parent sheet PAR-009 shows where a child-detail address comes from), and `/dashboard/household/create`.
+ 
+ **Steps:**
+ | # | Action (click-by-click) | Expected result |
+@@ -291,10 +291,11 @@
+ | 4 | Confirm whether the support action saves | The server should refuse the child-context write; record what you see. |
+ | 5 | Type a child-detail page address and load it | The page opens. Try any action that would change data on it. |
+ | 6 | Confirm whether that change saves | The server should refuse the write; record what you see. |
++| 7 | Type `/dashboard/household/create` and try to create a household from a child session | The server refuses this with a clear "profile incomplete" style 403 error (a child's profile is never marked complete), not a silent failure. A clear rejection here is the pass, matching ONB-020's edge case in `role-parent.md`. |
+ 
+ **What to record (this is the deliverable for this test):**
+-- For each of the three pages: did it OPEN by address? (expected: yes - known, not a bug)
+-- For each page: could the child actually SEND or SAVE anything? (expected: no - the server should reject it)
++- For each of the four pages: did it OPEN by address? (expected: yes for the first three - known, not a bug; the household-create action may reject you outright with an error, which is fine)
++- For each page: could the child actually SEND or SAVE anything? (expected: no - the server should reject it, and for household-create specifically with a visible error rather than a silent no-op)
+ - If a child CAN successfully send or save in any of these, THAT is a real finding worth flagging (note it clearly), because the open-by-address part is the only known-and-allowed part.
+ 
+ **Screen-size check:** Not the focus here; a quick check on one phone width is enough.
+diff --git a/manual-qa/role-member.md b/manual-qa/role-member.md
+index 3efc5e5..0fe50db 100644
+--- a/manual-qa/role-member.md
++++ b/manual-qa/role-member.md
+@@ -43,6 +43,8 @@
+ | MEM-020 | Forced complete-profile / change-password | FUNCTIONAL |
+ | MEM-021 | File a bug / feedback in-app | FUNCTIONAL |
+ | MEM-022 | Library shows content for your tier and belt | FUNCTIONAL (tier + belt gated on purpose) |
++| MEM-023 | Group messaging | FUNCTIONAL |
++| MEM-024 | Urgent / audible messages | FUNCTIONAL |
+ | MEM-040 | BLOCKED: starting a chat with a plain member | FUNCTIONAL (expected: cannot start it) |
+ | MEM-041 | BLOCKED: analytics / history / settings / teachers / scan | FUNCTIONAL (expected: turned away) |
+ | MEM-042 | BLOCKED: create an event / manage members | FUNCTIONAL (expected: no such controls) |
+@@ -244,6 +246,7 @@
+ |---|---|---|
+ | 1 | Open `/progress` | Your progression loads: your current belt, the next belt, and how far along you are (classes attended versus required, a progress bar or percentage). |
+ | 2 | Read the numbers | They reflect your real attendance/curriculum, not placeholder values. With no activity, the progress reads near zero, not blank. |
++| 3 | Compare the total attendance count at the top against the sum of the per-curriculum/class-type breakdown further down | The two should match. If they disagree, file it. |
+ 
+ **Screen-size check:** Progress bars/charts stack vertically on a phone (<640px) and sit side by side on desktop.
+ 
+@@ -275,6 +278,7 @@
+ |---|---|---|
+ | 1 | From the club, open your club-scoped progress page | Your progress for THIS club loads (belt, next belt, classes done versus required). |
+ | 2 | Compare with `/progress` | The club-scoped page reflects the same club's numbers; if you belong to more than one club, this page is about this one only. |
++| 3 | As in MEM-003 step 3, check the total attendance count against the per-curriculum breakdown | They should match. |
+ 
+ **Screen-size check:** Same as MEM-003: charts stack on phone, side by side on desktop.
+ 
+@@ -579,6 +583,78 @@
+ 
+ ---
+ 
++### MEM-023 - Group messaging
++
++- **Status:** FUNCTIONAL
++- **Role(s) & sessions:** Member (Session A); ideally a second account (Session B, incognito) to be added to a group
++- **Solo or 2 testers:** Solo-with-tabs, or 2 testers for the live add/receive part
++- **Route(s) / feature:** `/dashboard/messages`
++- **Goal:** Prove group chats work, and that only paying/staff members can CREATE a group (any member can be added to one).
++
++**Preconditions / setup:**
++1. Logged in as the Member, inside the test club.
++2. FREE-ACCOUNT NOTE: creating a group needs a paying or staff account. If your account is free, the create step in this test should fail; that failure IS the expected result for step 2 below. Use a premium/staff account to test successful creation, and a free account to confirm the block.
++
++**Steps:**
++| # | Action (click-by-click) | Expected result |
++|---|---|---|
++| 1 | Open `/dashboard/messages` and look for a "create group" control | The control is present regardless of your tier (there is no visual free-tier lock on this button - the block, if any, happens after you try). |
++| 2 | As a FREE, non-staff member: try to create a group (name it, add at least one other club member) | The attempt fails. RECORD the exact message you see - it is likely a generic error rather than a clear "upgrade to create groups" message. That generic-error behavior is expected for now; do not file it as a missing message, just record it happened. |
++| 3 | As a PAYING or STAFF member: create a group the same way | The group is created; you land in its thread. |
++| 4 | Add a club member (including a free, non-staff one) to the group you created | They are added successfully - any member can be added to an existing group, even if they couldn't create one themselves. |
++| 5 | Send a message in the group | It appears in the thread for you; if you have a second session logged in as an added member, confirm it arrives there live. |
++| 6 | Open the group's info panel | You can see the member list and, if you created it, options to manage the group. |
++| 7 | Leave the group (or remove a member, if you manage it) | The action completes and the group list/membership updates. |
++
++**Screen-size check:** The group thread and its info panel behave the same as a 1:1 DM across phone/tablet/desktop (see MEM-013's split-pane note at 768px).
++
++**Edge cases to try:**
++- Try creating a group with no members added: expect a validation block, not an empty group.
++- As a free member already ADDED to a group by staff, confirm you CAN still send/read messages in it (the tier gate only blocks creating a new group, not participating in one).
++
++**Result capture:**
++- PASS / FAIL: [ ]
++- Screen size tested: [ ] phone (<640) [ ] tablet (~768) [ ] desktop (>=1024)
++- Language tested: [ ] EN [ ] FR
++- Notes / bug ID:
++
++---
++
++### MEM-024 - Urgent / audible messages
++
++- **Status:** FUNCTIONAL
++- **Role(s) & sessions:** Member (Session A); a second account (Session B, incognito) to receive
++- **Solo or 2 testers:** 2 testers (or one tester with two logged-in sessions) to see the receiving side
++- **Route(s) / feature:** `/dashboard/messages` (DM thread composer)
++- **Goal:** Prove any member can mark a direct message "urgent" and that the receiver gets a stronger, audible/vibrating push notification for it.
++
++**Preconditions / setup:**
++1. Logged in as the Member (Session A) with a DM thread open to a second account (Session B).
++2. This test is easiest on a real phone or an installed PWA with notifications allowed - a plain desktop browser tab may not show the full push behavior. If you cannot test push, still confirm the composer control and the in-app beep/toast (step 3) while Session B is foregrounded.
++
++**Steps:**
++| # | Action (click-by-click) | Expected result |
++|---|---|---|
++| 1 | In a DM thread, look at the message composer | A red bell / "send as urgent" toggle is available to you (this is NOT staff-only in a 1:1 DM - every member sees it here). |
++| 2 | Turn urgent ON and send a message | The message sends normally in the thread; there is no special marker stored on the message itself afterward (urgent only affects the push at send time, not the message history). |
++| 3 | With Session B's app open/foregrounded, watch it as you send from Session A | Session B plays an in-app beep and shows a toast for the urgent message, on top of the normal live-arrival behavior. |
++| 4 | With Session B's app backgrounded or closed (real device/PWA), send another urgent message | Session B's device gets a push notification that is harder to miss than a normal one: it requires interaction to dismiss, vibrates more, and plays a sound even if the phone is on silent-for-apps style settings. |
++| 5 | Send a NON-urgent message with the toggle off | Session B still gets a push, but a normal, quieter one - not the urgent treatment from step 4. |
++
++**Screen-size check:** The urgent toggle in the composer is reachable by thumb on a <640px screen.
++
++**Edge cases to try:**
++- Try the same urgent toggle inside a GROUP chat as a non-staff member: the toggle should not even be shown to you there (urgent-in-groups is staff-only), unlike the 1:1 DM case above.
++- iOS note: a custom urgent sound needs the PWA added to the Home Screen; a plain Safari tab won't get the full audible treatment. Record which platform you tested on.
++
++**Result capture:**
++- PASS / FAIL: [ ]
++- Screen size tested: [ ] phone (<640) [ ] tablet (~768) [ ] desktop (>=1024)
++- Language tested: [ ] EN [ ] FR
++- Notes / bug ID:
++
++---
++
+ ### MEM-014 - Submit an exit request
+ 
+ - **Status:** FUNCTIONAL
+@@ -693,8 +769,8 @@
+ | 1 | Open `/support` | The Support page loads under "Support" / "We're here to help", with a "My Tickets" list and filters (All / Open / Resolved) and a search box. |
+ | 2 | Tap "Report an Issue" | A form opens to create a ticket (a subject/description and a category like bug / suggestion / help). |
+ | 3 | Fill it in and submit | A success message; the new ticket appears in "My Tickets" with a status (e.g. "submitted"). |
+-| 4 | Open the ticket | The ticket thread page opens showing your message and the current status. |
+-| 5 | Stop here | A staff/admin reply is handled in the admin panel by a platform admin, not in your app. So an unanswered ticket here is expected; do NOT file "no one replied" as a bug. (The live reply arriving in the thread is checked in CR-016.) |
++| 4 | Open the ticket | The ticket thread page opens showing your message and the current status. Opening it marks the ticket read; any "new reply" indicator on that ticket in the "My Tickets" list should clear right away. |
++| 5 | Stop here | A staff/admin reply is handled in the admin panel by a platform admin, not in your app. So an unanswered ticket here is expected; do NOT file "no one replied" as a bug. (The live reply arriving in the thread, and the read-indicator clearing live, is checked in CR-016.) |
+ 
+ **Screen-size check:** The ticket list is a single column on phone; the create form and the thread stay usable at ~768px.
+ 
+@@ -760,7 +836,7 @@
+ | 1 | Open `/settings` | The settings page loads with tabs such as Privacy, Security and Notifications. |
+ | 2 | Open the Security tab and use "Change Password": enter your current password, then a new one twice | The new passwords must match (a mismatch shows a "passwords do not match" message and keeps the button disabled). On a valid match, saving succeeds with a confirmation. |
+ | 3 | Open the Privacy tab | You can toggle which of your details (phone, email, address, photo) other members can see; toggles save as you flip them. |
+-| 4 | Open the Notifications tab | You can set your push / email notification preferences; they save. |
++| 4 | Open the Notifications tab, under "Push Notifications" find the "Messages" toggle ("Get notified when someone sends you a message") | Flip it and confirm it saves. It defaults to OFF for new accounts - if you are on a fresh/seeded account, check its starting state and record it. The other two push rows (Class & Club Updates, Tips & Engagement) and the email preferences save the same way. |
+ | 5 | Open the Language selector in the top bar (the globe), switch between English and Français | The app text switches language and your choice persists across pages. |
+ 
+ > NOTE on billing: there is currently NO Account / Subscription / billing tab on this page (it is turned off for now). The separate "subscription pane" note is MEM-043. Do not file the missing billing tab.
+diff --git a/manual-qa/role-owner-primary.md b/manual-qa/role-owner-primary.md
+index 81adb09..8b2bcc3 100644
+--- a/manual-qa/role-owner-primary.md
++++ b/manual-qa/role-owner-primary.md
+@@ -226,7 +226,7 @@
+ | 1 | Open `/dashboard/club/create` | A two-step wizard opens on Step 1 ("Basic Information"), with a Club Name field, a Club Creation Code field, a Discipline picker, and a Language picker. "Next" is disabled until the required fields are filled. |
+ | 2 | Type a Club Name | Field accepts it. |
+ | 3 | Type the valid Club Creation Code from setup | Field accepts it. |
+-| 4 | Pick the Discipline (the list offers "Karate - Shotokan") | Discipline is selected. |
++| 4 | Open the Discipline picker | Discipline is selected from a list (e.g. "Karate - Shotokan", "Iaido"). Confirm "Iaido" is offered in the list; if it is missing, file it. |
+ | 5 | Pick the Language (English or French) | Language is selected; "Next" becomes enabled. |
+ | 6 | (Optional) expand "Advanced Options" | A collapsible section reveals logo upload, primary/secondary color pickers, federation, website, and social links. Filling these is optional. |
+ | 7 | Tap "Next" | The code is checked first; on a valid code a "saved" toast shows and you advance to Step 2, a celebratory "Trial Status" screen (14-day trial card) with confetti. |
+@@ -268,7 +268,7 @@
+ | 2 | Look at the stat cards | Cards show real numbers for things like active members, teachers/senseis, average attendance, and app-usage minutes (zeros are fine on a quiet club - not a bug). |
+ | 3 | Find the members preview area and tap the small "Members" link/chip | You are taken to the members page for this club. |
+ | 4 | Go back and scroll to the activity/members chart, then tap the "analytics" link under it | You are taken to the analytics page (membership tab). |
+-| 5 | Tap the avatar/sidebar (desktop) or the top menu to confirm your role label | The club shows you as the owner (no member-only view). |
++| 5 | Tap your avatar pill in the top-right of the header to open the profile menu | The dropdown opens with My Profile, Household, Switch Profile, Switch Club, and Settings; confirms you are recognized as the owner (no member-only view). |
+ 
+ **Screen-size check:** On phone the stat cards stack and the right-hand club sidebar slides in from a toggle; at desktop (>=1024) the club list sidebar is docked on the side.
+ 
+@@ -445,6 +445,7 @@
+ - KNOWN - do not file: if you instead create a class by opening a **Room page** and using the room's own class-create modal, the teacher picker there lists placeholder / sample teacher names (not your real senseis). That picker is a known mock (START-HERE §8 #6). To get real teachers, create classes from the **Calendar** (this test) or the **club overview** create-class flow, not from inside the Room modal.
+ - Set an end time before the start time → expect a validation error.
+ - Cancel the dialog mid-way → no class created.
++- In the Room-based one-off/recurring class form (not the Calendar flow above), fill in date, start time, and duration: room availability auto-checks itself a moment after you stop typing and shows a conflict inline, without you tapping a separate "check availability" button. Confirm it catches a real clash (try booking the same room/time as an existing class).
+ 
+ **Result capture:**
+ - PASS / FAIL: [ ]
+@@ -538,15 +539,20 @@
+ | 1 | Tap an existing event on the calendar | An event detail / edit view opens. |
+ | 2 | Change its name or details and save | The event shows the updated info on the calendar. |
+ | 3 | Change its date or time (reschedule) and save | The event moves to the new slot on the calendar. |
+-| 4 | Open a recurring-class occurrence and edit it | You are offered to edit this occurrence (and/or the whole series); apply your choice and confirm it took effect. |
+-| 5 | Cancel / delete an event | After confirming, the event is removed from the calendar. |
++| 4 | Open a recurring-class occurrence and cancel/reschedule it | A scope picker asks whether the change applies to "this class", "this and future classes", or "all classes" in the series. Pick one and confirm it applies at the right scope (check a different occurrence to be sure it wasn't changed when you picked "this class" only). |
++| 5 | Still in the cancel/reschedule window, look near the top | A live countdown shows how long until the class starts (e.g. "starts in 2h 15m"), or "class ongoing" / "class ended" if applicable. |
++| 6 | On a ONE-OFF (non-recurring) class starting within 2 hours, try to soft-cancel it | Soft-cancel is blocked this close to start time (the late-cancel threshold); you may still be offered a hard delete instead. A recurring class occurrence is not subject to this 2-hour block (it uses delete, not soft-cancel). |
++| 7 | Reschedule a recurring series and check whether you can also edit the series' name/description and its end date or occurrence count from the same dialog | All of those are editable together in the same dialog. |
++| 8 | Cancel / delete a one-off event (outside the 2-hour window) | After confirming, the event is removed from the calendar. |
++| 9 | On any event's detail popup on the calendar, look for a way to reassign the teacher without reopening the full edit form | A quick teacher-reassignment control (a small picker right in the popup) lets you swap the assigned teacher directly; real club members are offered, not placeholders. |
+ 
+-**Screen-size check:** The edit view is reachable on phone; the date/time pickers are usable by thumb.
++**Screen-size check:** The edit view, scope picker, and countdown label are reachable on phone; the date/time pickers are usable by thumb.
+ 
+ **Edge cases to try:**
+ - Reschedule into the past → note whether the app warns/blocks; record it.
+ - Cancel the delete confirmation → the event stays.
+ - Refresh after an edit → the change persists (not just a local UI change).
++- Open the same class from both its calendar chip and its edit-popup header at once (or before/after editing) and compare the displayed time in each place - they should always match.
+ 
+ **Result capture:**
+ - PASS / FAIL: [ ]
+@@ -842,7 +848,7 @@
+ | # | Action (click-by-click) | Expected result |
+ |---|---|---|
+ | 1 | Open `.../[clubID]/eligible-students` | The eligible-students page loads (no "access restricted" message - owner is allowed). |
+-| 2 | Look at the list | Students who meet the promotion criteria are shown (an empty list is fine on a club with no eligible students yet - not a bug). |
++| 2 | Look at the list | Students who meet the promotion criteria are shown (an empty list is fine on a club with no eligible students yet - not a bug). This list, and the candidate picker when scheduling an exam (OWP-019), only offer eligible plain members - confirm a member you know is NOT eligible does not appear. |
+ | 3 | Use any role/belt filters present | The list filters accordingly. |
+ 
+ **Screen-size check:** The list and filters are usable on phone; rows are readable.
+@@ -875,19 +881,20 @@
+ **Steps:**
+ | # | Action (click-by-click) | Expected result |
+ |---|---|---|
+-| 1 | Open `.../[clubID]/exams` | The exams page loads with "Upcoming" and "Graded" style groupings and a way to schedule an exam. |
+-| 2 | Schedule an exam: fill name, a target belt, date, start/end time, room, examiner(s), and candidate(s) | The form accepts the inputs. The exam date must be today or in the future; a past date is rejected with "Date must be in the future". |
++| 1 | Open `.../[clubID]/exams` | The exams page loads with grouping/status badges and a way to schedule an exam. Status is derived live off the clock (in the club's own timezone): an exam shows "Upcoming" before its start time, switches to "In Progress" once its start time passes (even if nobody has opened grading yet), and only shows "Graded"/"Completed" after you finalize. |
++| 2 | Schedule an exam: fill name, a target belt, date, start/end time, room, examiner(s), and candidate(s). The candidate picker should only offer members already eligible (OWP-018) | The form accepts the inputs. The exam date must be today or in the future; a past date is rejected with "Cannot schedule an exam in the past" (this exact message). |
+ | 3 | Tap "Schedule Exam" | A "scheduled" success message; the exam appears under Upcoming. |
+-| 4 | Open the exam and tap "Grade" (or open `.../exams/[examID]/grading`) | If the exam date is still in the future, the page shows an "Exam Not Yet Conducted" screen and you cannot grade yet. For an exam dated today or earlier, the grading page opens listing the candidates with Fail / Pending / Pass controls, plus an "Examiners Present" panel at the top. |
+-| 5 | In the "Examiners Present" panel, mark at least two examiners present | Each tapped examiner turns "present"; the "minimum examiners" warning clears once two or more are present. |
+-| 6 | Set Pass or Fail for each candidate and add a note | The choice is recorded; the passed / failed / pending tally updates; you can save the note (and a draft auto-saves). |
+-| 7 | Tap "Finalize Results" | A finalize confirmation dialog appears summarizing pass/fail counts. The confirm button is enabled only when at least two examiners are marked present. |
+-| 8 | Confirm the finalize | A "results finalized" success message; the exam moves to graded/completed. Every candidate you marked "pass" is automatically promoted to the exam's target belt (their belt updates and a congratulation note is sent per passed candidate). |
++| 4 | On the calendar (not the Exams page), find this exam's event and look for a "Grade" button on its popup | The button is disabled/greyed out until the exam's start time passes, and shows a status badge (Upcoming / In Progress / Graded) matching the Exams page. Once start time passes, tapping it takes you straight to `.../exams/[examID]/grading`. |
++| 5 | Open the exam and tap "Grade" (or open `.../exams/[examID]/grading`) | If the exam date/time is still in the future, the page shows an "Exam Not Yet Conducted" screen and you cannot grade yet. Once its start time has passed (status "In Progress"), the grading page opens listing the candidates with Fail / Pending / Pass controls, plus an "Examiners Present" panel at the top. |
++| 6 | In the "Examiners Present" panel, mark at least two examiners present | Each tapped examiner turns "present"; the "minimum examiners" warning clears once two or more are present. |
++| 7 | Set Pass or Fail for each candidate and add a note | The choice is recorded; the passed / failed / pending tally updates; you can save the note (and a draft auto-saves). |
++| 8 | Tap "Finalize Results" | A finalize confirmation dialog appears summarizing pass/fail counts. The confirm button is enabled only when at least two examiners are marked present. |
++| 9 | Confirm the finalize | A "results finalized" success message; the exam moves to graded/completed. Every candidate you marked "pass" is automatically promoted to the exam's target belt (their belt updates and a congratulation note is sent per passed candidate). |
+ 
+ **Screen-size check:** The examiner-present panel and the grading rows (Fail/Pending/Pass + notes) are usable on phone; the finalize button is reachable.
+ 
+ **Edge cases to try:**
+-- Schedule an exam with a date in the past → expect a "Date must be in the future" validation error; you cannot schedule it.
++- Schedule an exam with a date in the past → expect a "Cannot schedule an exam in the past" validation error; you cannot schedule it.
+ - Open the grading page for a future-dated exam → expect the "Exam Not Yet Conducted" screen, not the grading controls.
+ - Reach the finalize dialog with fewer than two examiners marked present → the Confirm button stays disabled and a "at least two examiners" warning shows; you cannot finalize.
+ - Leave a candidate on "Pending" and try to finalize → note what happens (a pending warning shows); record it.
+@@ -1111,10 +1118,11 @@
+ | # | Action (click-by-click) | Expected result |
+ |---|---|---|
+ | 1 | Open the club library, then its "Manage" area (`.../[clubID]/library/manage`) | The manage view loads with existing moves/media and a way to add a new one. |
+-| 2 | Create a new move/media item: fill the details and (optionally) attach media | The form accepts input. (Any video plays as a normal video file - adaptive quality switching is not built; START-HERE §8 #2.) |
++| 2 | Create a new move/media item: fill the details and attach a video | While it uploads, watch for a live progress indicator (a percentage/progress bar). (Any video plays as a normal video file - adaptive quality switching is not built; START-HERE §8 #2.) |
+ | 3 | Save | A success indication; the new item appears in the club library. |
+-| 4 | Open "Movement Types" (`.../library/movement-types`) and add/edit a type | The movement type is saved and shows in the list. |
+-| 5 | Edit an existing move and save | The edit persists. |
++| 4 | If you can force a flaky connection (devtools network throttling or briefly toggling airplane mode mid-upload), try uploading a larger video | The upload retries automatically on a transient failure (up to a few attempts) before giving up; you should not have to manually restart the whole upload for a single dropped chunk. |
++| 5 | Open "Movement Types" (`.../library/movement-types`) and add/edit a type | The movement type is saved and shows in the list. |
++| 6 | Edit an existing move and save | The edit persists. |
+ 
+ **Screen-size check:** The manage forms and media upload are usable on phone (use a real device for camera capture).
+ 
+diff --git a/manual-qa/role-parent.md b/manual-qa/role-parent.md
+index 2fee502..ee2ce87 100644
+--- a/manual-qa/role-parent.md
++++ b/manual-qa/role-parent.md
+@@ -49,6 +49,7 @@
+ 
+ **Preconditions / setup:**
+ 1. Logged in as a parent account that does NOT already have a household. (If your seeded Parent already has one, skip to ONB-021, or use a fresh account.)
++2. Household creation is server-gated on having a COMPLETE profile. Your seeded parent account should already be profile-complete; if you are testing with a brand-new/incomplete-profile account instead, expect step 5 to be refused with a "profile incomplete" style error until you finish `/complete-profile` first - see the edge case below.
+ 
+ **Steps:**
+ | # | Action (click-by-click) | Expected result |
+@@ -64,6 +65,7 @@
+ **Edge cases to try:**
+ - Open the Create dialog and tap the X / Cancel → it closes with no household created; reopening My Household shows the setup screen again.
+ - Type a name, submit, then open My Household again → it now takes you straight to the household (no setup screen), proving one household per account.
++- With an account whose profile is NOT complete yet, try to create a household: the server should refuse it (403, "profile incomplete" style error), not silently succeed. A switched-in child session hits the same block, which is what CHD-040 in `role-child.md` checks from that side.
+ 
+ **Result capture:**
+ - PASS / FAIL: [ ]
+diff --git a/manual-qa/role-sensei.md b/manual-qa/role-sensei.md
+index 07f2a6e..b765175 100644
+--- a/manual-qa/role-sensei.md
++++ b/manual-qa/role-sensei.md
+@@ -28,6 +28,7 @@
+ | SEN-008 | Manage library content | FUNCTIONAL |
+ | SEN-009 | Scan attendance / generate a class QR | FUNCTIONAL |
+ | SEN-010 | Take room-level attendance | FUNCTIONAL |
++| SEN-011 | Teaching schedule filter on the Calendar | FUNCTIONAL |
+ | SEN-040 | BLOCKED: Analytics | FUNCTIONAL (expected: access restricted) |
+ | SEN-041 | BLOCKED: History | FUNCTIONAL (expected: access restricted) |
+ | SEN-042 | PROBE: can a sensei reach and save Club Settings? | KNOWN-GAP (record observations) |
+@@ -123,7 +124,8 @@
+ | 2 | Start creating a new event (the add/create control on the calendar) | A create panel opens with event-type choices (class, exam, workshop, social gathering, tournament) and fields for date, time, and room. |
+ | 3 | Pick "class," set a date and time, choose the room from step 2, and pick a real teacher if asked | Fields accept your input; the teacher list shows real club members (not placeholder names). |
+ | 4 | Save the event | The event is created and appears on the calendar at the date/time you set. |
+-| 5 | Open the event you just made and change its time, then save | The event moves to the new time and the change persists after a refresh. |
++| 5 | Open the event you just made and change its time, then save | The event moves to the new time and the change persists after a refresh. If it is a one-off class starting within the next 2 hours, soft-cancel/reschedule is blocked by a late-cancel threshold; use a class further out to test a normal edit. If it is a recurring occurrence, you are asked whether the change applies to this class, this-and-future, or all classes in the series. |
++| 6 | On the event's calendar popup, look for a quick way to swap the assigned teacher without reopening the full edit form | A small teacher-reassignment picker is available right in the popup, offering real club members (staff only see this control). |
+ 
+ **Screen-size check:** The calendar switches from a compact day/list view on phone to a wider month grid on desktop. The create panel is fully usable, with the Save button reachable by thumb, on a <640px screen.
+ 
+@@ -156,13 +158,14 @@
+ **Steps:**
+ | # | Action (click-by-click) | Expected result |
+ |---|---|---|
+-| 1 | Open the Exams page | The exam list loads. No "access restricted" block; a sensei may manage exams. A "create exam" control is available. |
+-| 2 | Create an exam: set its name (or use auto-name), date, time, room, the target belt, and add examiners and candidates | Fields accept input; you can add at least two examiners and one or more candidates. Save. |
+-| 3 | The new exam appears in the list with a status like "Upcoming" | The exam is saved and listed. |
+-| 4 | Open the exam's grading screen | The grading view opens with your candidates listed and a way to mark each examiner present and record a pass/fail per candidate. |
+-| 5 | Mark only ONE examiner present and try to finalize | Finalize is refused with a message that at least two examiners must be present. (This refusal is the expected result.) |
+-| 6 | If the exam date is in the future, try to finalize | Finalize is refused because the exam has not been conducted yet. (Expected. Re-schedule it for today to proceed.) |
+-| 7 | Mark TWO examiners present, set one candidate to "pass," and finalize | Finalize succeeds. The candidate graded "pass" is automatically promoted to the target belt (their belt changes; their progress resets toward the next belt). A "draft save" earlier would NOT have promoted anyone. |
++| 1 | Open the Exams page | The exam list loads. No "access restricted" block; a sensei may manage exams. A "create exam" control is available. Exam status badges are derived live from the clock (club timezone): "Upcoming" before start time, "In Progress" once start time passes, "Graded"/"Completed" only after finalize. |
++| 2 | Create an exam: set its name (or use auto-name), date, time, room, the target belt, and add examiners and candidates. The candidate picker should default to eligible members only | Fields accept input; you can add at least two examiners and one or more candidates. Save. A past date is rejected with "Cannot schedule an exam in the past". |
++| 3 | The new exam appears in the list with status "Upcoming" | The exam is saved and listed. |
++| 4 | Open the exam's grading screen before its start time | Blocked with an "Exam Not Yet Conducted" screen - correct, not a bug. |
++| 5 | Open the exam's grading screen once its start time has passed (status "In Progress") | The grading view opens with your candidates listed and a way to mark each examiner present and record a pass/fail per candidate. |
++| 6 | Mark only ONE examiner present and try to finalize | Finalize is refused with a message that at least two examiners must be present. (This refusal is the expected result.) |
++| 7 | If the exam date is in the future, try to finalize | Finalize is refused because the exam has not been conducted yet. (Expected. Re-schedule it for today to proceed.) |
++| 8 | Mark TWO examiners present, set one candidate to "pass," and finalize | Finalize succeeds. The candidate graded "pass" is automatically promoted to the target belt (their belt changes; their progress resets toward the next belt). A "draft save" earlier would NOT have promoted anyone. |
+ 
+ **Screen-size check:** The grading screen is wide; on phone the candidate rows stack and the present/result controls stay reachable, on desktop they sit in a table.
+ 
+@@ -170,6 +173,7 @@
+ - Save grading as a draft (not finalize): the exam is NOT marked complete and no one is promoted.
+ - Try to finalize an exam that is already completed: it is refused.
+ - Leave a candidate at "pending" and finalize: confirm only "pass" candidates get promoted.
++- On the Calendar (not the Exams page), find this exam's popup and use its "Grade" shortcut button: disabled until start time, then jumps straight into grading, matching the status badge shown there.
+ 
+ **Result capture:**
+ - PASS / FAIL: [ ]
+@@ -388,6 +392,40 @@
+ 
+ ---
+ 
++### SEN-011 - Teaching schedule filter on the Calendar
++
++- **Status:** FUNCTIONAL
++- **Role(s) & sessions:** Sensei (Session A)
++- **Solo or 2 testers:** Solo-with-tabs
++- **Route(s) / feature:** `.../[clubID]/calendar`
++- **Goal:** Prove the Calendar's Teaching/Attending filter defaults sensibly for a sensei and lets them check another teacher's schedule.
++
++**Preconditions / setup:**
++1. Logged in as the Sensei, inside the club.
++2. Ideally the club has at least one class taught by you and one taught by a different teacher, plus one class you are enrolled in as a student (curriculum), so you can tell the views apart.
++
++**Steps:**
++| # | Action (click-by-click) | Expected result |
++|---|---|---|
++| 1 | Open the Calendar | It defaults to a "Teaching · Mine" view: only events where you are the assigned teacher are shown. |
++| 2 | Switch the filter to "Attending" | The calendar now shows classes you are enrolled in / attending as a student instead of the ones you teach. |
++| 3 | Open the `[Name ▾]` teacher dropdown | You can pick another teacher to view their schedule; as a sensei (not owner), this list is scoped, not the full club roster. |
++| 4 | Enroll or unenroll a member in a curriculum tied to a class, then return to the Calendar | The calendar refreshes to reflect the curriculum change without a manual reload. |
++
++**Screen-size check:** The Teaching/Attending toggle and the teacher dropdown stay reachable and don't overlap the calendar grid on a <640px screen.
++
++**Edge cases to try:**
++- Confirm a plain member never sees this toggle at all (their calendar is attendance-only, no filter).
++- As the owner (a second login), confirm the equivalent dropdown offers the FULL teacher roster, not just a scoped subset like the sensei's.
++
++**Result capture:**
++- PASS / FAIL: [ ]
++- Screen size tested: [ ] phone (<640) [ ] tablet (~768) [ ] desktop (>=1024)
++- Language tested: [ ] EN [ ] FR
++- Notes / bug ID:
++
++---
++
+ ## Access-control battery (the things a sensei is BLOCKED from)
+ 
+ > For these, the BLOCK is the expected result. A clean "access restricted" screen, a missing control, or a server-rejected save is a PASS, not a bug. Only file if you can actually do the blocked thing (for example, an owner-only change saves successfully as a sensei).

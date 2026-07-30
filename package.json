@@ -1,0 +1,34 @@
+{
+  "name": "martial-apps-testing",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Manual QA scenarios (manual-qa/) and their Playwright e2e automation (e2e/) for Martial Apps",
+  "scripts": {
+    "test": "playwright test",
+    "test:dev": "cross-env TEST_ENV=dev playwright test",
+    "test:smoke": "playwright test e2e/specs/smoke-testing",
+    "test:smoke:dev": "cross-env TEST_ENV=dev playwright test e2e/specs/smoke-testing",
+    "test:regression": "playwright test e2e/specs/regression",
+    "test:regression:dev": "cross-env TEST_ENV=dev playwright test e2e/specs/regression",
+    "test:group": "node scripts/run-group.mjs",
+    "test:group:dev": "cross-env TEST_ENV=dev node scripts/run-group.mjs",
+    "test:setup": "playwright test --project=setup",
+    "test:setup:dev": "cross-env TEST_ENV=dev playwright test --project=setup",
+    "codegen": "node scripts/codegen.mjs",
+    "codegen:dev": "cross-env TEST_ENV=dev node scripts/codegen.mjs",
+    "test:ui": "playwright test --ui",
+    "test:headed": "playwright test --headed",
+    "report": "playwright show-report",
+    "typecheck": "tsc --noEmit",
+    "report:allure": "node -e \"require('fs').rmSync('allure-report',{recursive:true,force:true})\" && allure generate allure-results -o allure-report && allure open allure-report"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.56.0",
+    "@types/node": "^24.10.0",
+    "allure": "^3.14.3",
+    "allure-playwright": "^3.10.2",
+    "cross-env": "^10.1.0",
+    "dotenv": "^17.2.0",
+    "typescript": "^5.9.0"
+  }
+}

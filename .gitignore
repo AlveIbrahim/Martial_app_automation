@@ -1,0 +1,22 @@
+# Node
+node_modules/
+npm-debug.log*
+yarn-error.log*
+
+# Credentials - NEVER commit
+.env
+.env.local
+.env.*.local
+
+# Playwright auth state - contains LIVE SESSION TOKENS, never commit
+playwright/.auth/
+
+# Playwright output
+test-results/
+playwright-report/
+blob-report/
+playwright/.cache/
+
+# Allure
+allure-results/
+allure-report/
