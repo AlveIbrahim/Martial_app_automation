@@ -76,6 +76,66 @@ export const clubSectionLocators = {
   payments: (page: Page): Locator =>
     page.getByRole('heading', { name: /^(Payments|Paiements)$/i }).first(),
 
+  /* ---- the management pages a staff role reaches from the overview ---- */
+
+  /** `appUsage.pageTitle`, present in both messages files. */
+  usage: (page: Page): Locator =>
+    page.getByRole('heading', { name: /^(App Usage|Utilisation de l'App)$/i }).first(),
+
+  /** `eligibleStudents.pageTitle`, present in both. */
+  eligibleStudents: (page: Page): Locator =>
+    page
+      .getByRole('heading', { name: /^(Eligible Students|[ÉE]l[èe]ves [ée]ligibles)$/i })
+      .first(),
+
+  /** `clubCurricula.pageTitle`, present in both. */
+  curricula: (page: Page): Locator =>
+    page.getByRole('heading', { name: /^(Curricula|Programmes)$/i }).first(),
+
+  /**
+   * ANCHORING IS LOAD-BEARING ON THESE TWO, not a style choice.
+   *
+   * `promotions.title` is "Belt Promotions" and `clubExams.title` is "Belt
+   * Promotion Exams". An unanchored /Belt Promotion/ matches BOTH, so the
+   * promotions marker would pass on the exams page and vice versa - each test
+   * would prove only that one of two pages loaded. The French pair collides the
+   * same way ("Promotions de ceinture" / "Examens de promotion de ceinture").
+   */
+  promotions: (page: Page): Locator =>
+    page.getByRole('heading', { name: /^(Belt Promotions|Promotions de ceinture)$/i }).first(),
+  exams: (page: Page): Locator =>
+    page
+      .getByRole('heading', {
+        name: /^(Belt Promotion Exams|Examens de promotion de ceinture)$/i,
+      })
+      .first(),
+
+  /**
+   * The CLUB's belt ladder. UNANCHORED, and that is deliberate twice over.
+   *
+   *   1. The H1 renders `{club name} · {title}`, so it reads "Automation Club ·
+   *      Belt System" on the seeded club. Anchoring would pin the test to one
+   *      club's name and break on the next reseed.
+   *   2. `belts.beltSystemTitle` is MISSING from messages/fr.json - one of the
+   *      13 keys in COVERAGE.md section 6 item 1b - so a French user's H1 reads
+   *      "Automation Club · belts.beltSystemTitle". The raw-key alternative
+   *      below matches that, which is the RAW_I18N_KEY_WITHIN case described in
+   *      common.locators.ts: a broken key hiding inside otherwise-valid copy.
+   *
+   * The FR alternative is what a fixed build should render (`club.beltSystem`
+   * already has it), and costs nothing to carry now.
+   *
+   * THE COST, STATED: tolerating the raw key means this test cannot fail on that
+   * label. Only `specs/i18n/belts-copy.spec.ts` covers it, and it is `fixme`
+   * until the French keys land. The two are removed together.
+   */
+  clubBelts: (page: Page): Locator =>
+    page
+      .getByRole('heading', {
+        name: /Belt System|Syst[èe]me de [Cc]eintures|belts\.beltSystemTitle/i,
+      })
+      .first(),
+
   /** Management controls that must not render for the wrong role. */
   createEvent: (page: Page): Locator =>
     page.getByRole('button', {

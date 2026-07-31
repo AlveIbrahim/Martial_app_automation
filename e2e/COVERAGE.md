@@ -10,7 +10,8 @@ proves each group — see [`smoke_testing_scenarios.md`](smoke_testing_scenarios
 This file is the wider view: every scenario, the difficulty buckets, and what to
 automate next.
 
-Last updated: 2026-08-01 (`MEM-019` step 1 — the first test in smoke group 12,
+Last updated: 2026-08-01 (`OWS-001` — the co-owner management surface, 13 cases,
+which corrected two errors in its sheet. Earlier the same day: `MEM-019` step 1 — the first test in smoke group 12,
 which had none. Surfaced the hardcoded-English tab labels in section 6 item 1d.
 Same day: **codegen groundwork** — 63 route keys, dynamic-id discovery, a
 `parent` session, and a `Codegen` column on every smoke table. See section 5.)
@@ -45,21 +46,28 @@ confirmed the bug, and then pulled from the suite for now at QA's request).
 
 | Status | Scenario IDs | Share |
 | --- | ---: | ---: |
-| Fully automated | 17 | 11% |
-| Partially automated | 9 | 6% |
-| Not started | 133 | 84% |
+| Fully automated | 20 | 13% |
+| Partially automated | 7 | 4% |
+| Not started | 132 | 83% |
 | **Total** | **159** | |
 
-That's 43 executable test cases, because several scenarios fan out over multiple
-routes (`MEM-041` alone covers four), 11 of the 43 are positive controls rather
+That's 56 executable test cases, because several scenarios fan out over multiple
+routes (`MEM-041` alone covers four, and `OWS-001` thirteen), 11 of the 56 are positive controls rather
 than scenarios of their own, and `SMK-020` / `SMK-021` are two more with no
 manual sheet to be counted against.
 
 > **Verified result against `dev`, 2026-08-01: 47 passed, 3 failed, 2 skipped**
 > (`npm run test:dev`, 2.7 minutes; Playwright counts the 7 `setup` tests
-> alongside the 43 above). **All 3 failures are deliberate** — they report open
-> app bugs and are listed in section 3. The 2 skips are the `fixme` copy checks
-> in `specs/i18n/`. No flaky results.
+> alongside the 43 executable cases **as they stood then** — `OWS-001`'s 13 came
+> after this run, which is why the summary above now says 56). **All 3 failures
+> are deliberate** — they report open app bugs and are listed in section 3. The
+> 2 skips are the `fixme` copy checks in `specs/i18n/`. No flaky results.
+>
+> **`OWS-001` verified separately, same day: 20 passed in 43.5s** — its 13 cases
+> plus the 7 setup tests, green on the first run. Every guard prediction held:
+> the co-owner reached all four tabs and all nine management pages, including
+> the three whose guards were read rather than assumed (`usage`,
+> `eligible-students`, `promotions`).
 >
 > **The +3 against the previous run reconciles exactly**, which is the point of
 > recording the number at all: `MEM-019`, `SMK-030`, and the sixth `setup`
@@ -149,21 +157,40 @@ the screen a real user types into.** They are also the only tests here that run
 unauthenticated, which needs no new Playwright project — the config sets no
 project-level `storageState`, so omitting `asRole(...)` is the whole mechanism.
 
+### Automation complete — the remainder is permanently manual
+
+**These are DONE, and should not be read as a backlog.** Everything a machine can
+judge is automated and green; what is left needs a camera or a human eye and will
+never be automatable, no matter how much infrastructure is built. They carry
+`✅ ⛔` in `smoke_testing_scenarios.md`, and they are counted as fully automated in
+section 1 for that reason.
+
+The distinction matters practically: filing these alongside the genuinely
+unfinished rows below made the backlog look bigger than it was, and sent whoever
+picked up work to a row that could never move.
+
+| ID | Automated | Stays manual, forever | Why |
+| --- | --- | --- | --- |
+| `OWS-001` | 13 cases: the four club tabs, the three other tab destinations, nine management pages | Scan Attendance | Mounts a live camera (`html5-qrcode`, `#qr-reader`) and needs real hardware plus a permissions grant. |
+| `MEM-011` | Steps 1 and 3: the club library renders; no manage control for a member | Step 2, playing a move | Video playback is a visual judgement. |
+| `MEM-041` | Analytics, History, Settings, Teachers (4 cases) | The Scan Attendance half | The member view mounts a live camera. The sheet's step 6 was also wrong about the route and has been corrected — that screen allows members by design and blocks `secretary` only. |
+
 ### Partially automated
 
-The first two are blocked by the same thing: **the manual sheet states
-something the app does not do.** The app is right in both cases, so the fix is
-to the sheet, not the test. The last three are simply waiting on seeded data.
+**These are unfinished, and each will move** once something buildable exists —
+seeded data, a fixture file, the write project. That is what separates them from
+the table above.
+
+The first is blocked by a different thing: **the manual sheet states something the
+app does not do.** The app is right, so the fix is to the sheet, not the test.
 
 | ID | Automated | Not automated | Why |
 | --- | --- | --- | --- |
-| `MEM-041` | Analytics, History, Settings, Teachers (4 cases) | Scan Attendance half | `.../scan-attendance` is student self-check-in and opens for a member by design — it blocks `secretary` only, and its copy addresses students. The staff-side screen is a different route (`site/[siteId]/rooms/[roomId]/attendance`), which does block plain members. Step 6 of the sheet has been corrected; the check would stay manual regardless, since the member view mounts a live camera. |
 | `MEM-042` | Calendar half: no create-event control | Members-page half | `MEM-042` step 3 says a member can view the roster, but `MEM-007` says they are turned away. The app agrees with `MEM-007` (`members/page.tsx` blocks `club_member`), so the roster half is unreachable — there is no roster on which to check for absent controls. Not present in the suite; the sheet needs correcting. |
 | `SEN-044` | A sensei is not offered the owner-level roles (passing); a sensei is not offered the role editor at all (**failing — see section 3**) | The fee-tier half of the scenario | Both role checks are automated. Fee-tier controls are a separate surface and are not covered yet. |
 | `SEN-042` | That a sensei is blocked from Club Settings (**failing — see section 3**) | The rest of the PROBE | The scenario also asks a human to record which settings tabs open and whether each save is refused. Proving a refusal needs a write, so it belongs with the mutating-tests milestone. |
 | `MEM-004` | Step 1: the club-scoped progress page renders (belt journey, overall attendance) | Steps 2–3, the number comparisons | The seeded member has no attendance at all ("No classes attended yet"), so `/progress` against the club page and the total against the per-curriculum breakdown are both `0 == 0` — they would pass without proving anything. Needs seeded attendance. |
 | `MEM-008` | Steps 1 and 3: the sites list renders; no Add Site / Add Room for a member | Step 2, opening a site then a room | Needs a seeded room to click into. The guard itself is a real `clubRole` check (`site/page.tsx` ~line 673), not the `userRole` alias behind section 3. |
-| `MEM-011` | Steps 1 and 3: the club library renders; no manage control for a member | Step 2, opening a move and playing its media | Video playback is a visual judgement and stays manual. |
 | `MEM-003` | Step 1: `/progress` renders the belt progression path | Steps 2–3, the number comparisons | Same blocker as `MEM-004`, and the same reason it is not marked done: the seeded member has no attendance, so "the total matches the per-curriculum breakdown" is `0 == 0` and would pass whether or not either number is computed correctly. Needs seeded attendance. |
 | `MEM-019` | Step 1: `/settings` renders and offers all four tabs | Steps 2–5 | **Every remaining step writes** — change password, flip privacy toggles, save a push preference, switch UI language. They belong with the mutating-tests milestone, not with a read-only suite that runs against shared `dev`. Step 5 also overlaps group 17 (`XC-001`), which is where the language switch should be asserted. **The sheet needs correcting:** it lists three tabs, the page renders four (`Membership` is absent from it). |
 
@@ -316,9 +343,9 @@ does not produce a URL matching `/[?&]password=/`. Re-add it, restore its row in
 
 ## 4. What is left
 
-138 scenarios, triaged by how hard they are to automate.
+137 scenarios, triaged by how hard they are to automate.
 
-### Bucket A — cleanly automatable (41 remaining)
+### Bucket A — cleanly automatable (40 remaining)
 
 Deterministic UI flows with clear assertions, needing no special data setup
 beyond the seeded demo club. **This is the highest-value work remaining.**
@@ -330,7 +357,7 @@ beyond the seeded demo club. **This is the highest-value work remaining.**
 | `role-parent` | `PAR-001`–`PAR-005`, `PAR-009`, `PAR-010`, `PAR-040`, `PAR-041` | 9 |
 | `role-sensei` | `SEN-002`, `SEN-003`, `SEN-006` | 3 |
 | `role-secretary` | `SEC-004`, `SEC-005`, `SEC-007` | 3 |
-| `role-owner-secondary` | `OWS-001`, `OWS-005` | 2 |
+| `role-owner-secondary` | `OWS-005` | 1 |
 
 **`SEN-002` needs deciding before it is written, not while.** Its step 2 expects
 a sensei to see a Settings tab, and they do — but that is the open bug `SEN-042`

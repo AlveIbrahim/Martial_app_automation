@@ -168,6 +168,25 @@ export const commonLocators = {
     page.getByRole('button', { name: /^(Settings|Param[èe]tres)$/i }),
 
   /**
+   * The other two tabs, which carry NO role condition - every role that reaches
+   * a club page gets them (Header.tsx ~lines 1202-1211 gate only Members and
+   * Settings). They are the anchor proving the tab bar rendered at all, which is
+   * what makes "Members is absent" mean something rather than "nothing loaded".
+   *
+   * `header.sites` is "Sites" - PLURAL, and the same word in French. The route
+   * and the tab key are both singular `site`, so the label is the one place it
+   * is not; matching /^Site$/ finds nothing.
+   *
+   * NOTE the sheet is wrong about this bar. It calls for five tabs including
+   * Calendar; the rendered array is four - `['overview','members','site',
+   * 'settings']`. `calendar` survives only in the label map beside it, unused.
+   */
+  overviewTab: (page: Page): Locator =>
+    page.getByRole('button', { name: /^(Overview|Aper[çc]u)$/i }),
+  sitesTab: (page: Page): Locator =>
+    page.getByRole('button', { name: /^Sites$/i }),
+
+  /**
    * The club share / QR-link control in the sidebar, gated on `isAnyClubOwner`
    * (DesktopSidebar.tsx ~line 297). This is the "generate QR / share link"
    * MEM-005 expects a plain member never to be offered.

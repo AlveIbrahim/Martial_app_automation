@@ -13,7 +13,14 @@ export type ClubSection =
   | 'overview'
   | 'site'
   | 'clubLibrary'
-  | 'clubProgress';
+  | 'clubProgress'
+  | 'payments'
+  | 'usage'
+  | 'eligibleStudents'
+  | 'curricula'
+  | 'promotions'
+  | 'exams'
+  | 'clubBelts';
 
 /** A control named for failure messages, so a red test says which one appeared. */
 export interface NamedControl {

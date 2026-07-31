@@ -78,9 +78,23 @@ Route keys come from [`support/routes.ts`](support/routes.ts) — 63 of them. Ru
 | --- | --- |
 | ✅ | Automated and green |
 | 🔴 | Automated and **failing on purpose** — the red result is the bug report ([`COVERAGE.md`](COVERAGE.md) section 3) |
-| 🟡 | Partly automated — the rest is named in the row |
+| 🟡 | Partly automated, **and the rest is still to do** — blocked on something buildable: seeded data, a fixture file, the write project. This one will move. |
 | ⬜ | Automatable, not written yet |
 | ⛔ | Cannot be automated — reason in the row. Stays a human check, forever |
+
+**⛔ also works as a suffix**, and that is the distinction worth reading carefully:
+
+| | Meaning |
+| --- | --- |
+| ✅ ⛔ | **Automation is COMPLETE.** Everything a machine can judge is automated and green; the remainder of the scenario needs a camera, an inbox, or a human eye and will never be automatable. **This is not a gap — do not count it as work outstanding.** |
+| ⬜ ⛔ | The automatable half is not written yet; the other half never can be. |
+
+**Why `✅ ⛔` exists rather than 🟡.** A row like `OWS-001` — where thirteen cases
+are green and the only thing left is a QR scan needing real hardware — is *done*,
+as done as it will ever be. Marking it 🟡 alongside rows that are genuinely
+waiting on seeded data makes the backlog look bigger than it is and sends whoever
+is picking up work to a row that can never move. **🟡 means "come back to this";
+`✅ ⛔` means "finished, and here is the part a human still owns."**
 
 ---
 
@@ -91,12 +105,12 @@ Route keys come from [`support/routes.ts`](support/routes.ts) — 63 of them. Ru
 | 1 | [Club owner registration (website)](#1-club-owner-registration-website) | 4 | 0 | Email OTP |
 | 2 | [Club onboarding (admin app)](#2-club-onboarding-admin-app) | 5 | 0 | Second app target + admin credentials |
 | 3 | [Authentication](#3-authentication) | 8 | 3 | Email OTP for sign-up |
-| 4 | [Navigation & core UI](#4-navigation--core-ui) | 11 | 9 | — |
+| 4 | [Navigation & core UI](#4-navigation--core-ui) | 11 | 10 | — |
 | 5 | [Viewport & layout](#5-viewport--layout) | 1 | 0 | Mobile/tablet Playwright projects |
 | 6 | [Club creation & club join](#6-club-creation--club-join) | 5 | 0 | Club-creation code; destructive |
 | 7 | [Join requests](#7-join-requests) | 6 | 0 | A pending request; destructive |
 | 8 | [Class creation](#8-class-creation) | 6 | 0 | A site + room; destructive |
-| 9 | [Calendar & scheduling](#9-calendar--scheduling) | 4 | 2 | A seeded event |
+| 9 | [Calendar & scheduling](#9-calendar--scheduling) | 4 | 1 | A seeded event |
 | 10 | [Attendance & QR flow](#10-attendance--qr-flow) | 6 | 1 | Real camera |
 | 11 | [Exams, grading & belt progression](#11-exams-grading--belt-progression) | 13 | 3 | Seeded belt/exam data; destructive |
 | 12 | [Profile](#12-profile) | 4 | 1 | Upload fixture |
@@ -106,11 +120,12 @@ Route keys come from [`support/routes.ts`](support/routes.ts) — 63 of them. Ru
 | 16 | [Real-time messaging](#16-real-time-messaging) | 12 | 0 | Two browser contexts |
 | 17 | [Localization](#17-localization) | 1 | 0 | — |
 
-"Automated" counts ✅ and 🟡 rows alike; the group tables say which is which.
+"Automated" counts ✅, ✅ ⛔ and 🟡 alike — anything with a test behind it. ⬜ and
+⬜ ⛔ have none. The group tables say which is which.
 
-**20 smoke rows are automated today**, drawn from the 28 scenario IDs the suite
-covers in total — `SMK-023` counts toward the 28 as a scenario this file tracks,
-but not toward the 20 automated, since it currently has no test. The rest of those 28 are the co-owner boundary and the sites
+**20 smoke rows are automated today**, drawn from the 29 scenario IDs the suite
+covers in total — `SMK-023` counts toward the 29 as a scenario this file tracks,
+but not toward the 20 automated, since it currently has no test. The rest of those 29 are the co-owner boundary and the sites
 roster — regression concerns rather than smoke ones, listed under
 [Outside the smoke checklist](#outside-the-smoke-checklist).
 
@@ -190,7 +205,7 @@ not exist yet**; it is the prerequisite for this whole group.
 | `SEN-040`–`SEN-044` | Sensei boundary across five screens | ✅ 🔴 | `-- sensei analytics` | Also `history`, `teachers`, `settings`, `members`. `sensei.blocked.spec.ts`. `SEN-042` and `SEN-044` are red on purpose. |
 | `SEC-001` | My Club nav is visible to a secretary | ✅ | `-- secretary overview` | `secretary.allowed.spec.ts`. The positive counterpart to the secretary battery, and it doubles as a positive control for `MEM-005` — it asserts the Members tab IS offered, with the same selector. |
 | `SEN-001` | My Club nav is visible to a sensei | ✅ | `-- sensei overview` | `sensei.allowed.spec.ts`. Stops before the tab bar deliberately: a sensei being shown the Settings tab is `SEN-042`, already red. |
-| `OWS-001` | Co-owner sees the full management surface | ⬜ | `-- coOwner overview` | Same for co-owner. |
+| `OWS-001` | Co-owner sees the full management surface | ✅ ⛔ | `-- coOwner overview` | `co-owner.allowed.spec.ts`, 13 cases — the four tabs, then every page steps 2 and 3 list. **Two sheet corrections, both confirmed in source:** the tab bar renders **four** tabs, not five (`Header.tsx` ~line 1202 maps `['overview','members','site','settings']`; a `calendar` entry survives unused in the label map beside it, which is probably where the fifth came from), and the third tab is labelled **"Sites"**, plural. Only Scan Attendance is left out — it mounts a live camera, so it stays manual for every role. |
 | `SMK-030` | Every primary nav destination loads for the owner | ✅ | `-- ownerPrimary dashboard` | `owner.nav-sweep.spec.ts`. Eight destinations in one test. **It CLICKS the links rather than navigating by URL**, because three hrefs are computed at render time — Calendar and Library resolve to club-scoped URLs, and Payment forks between `/payments` (owner) and `/user-payments` (everyone else). Navigating to a URL we worked out ourselves would skip the half most likely to break. The sidebar's items are the only `data-track`-attributed elements in the app — see the note below. |
 | `CHD-001` | Child menu is restricted | ⬜ | `-- parent portal` | Needs a child profile — see group 14. |
 
@@ -237,7 +252,7 @@ not exist yet**; it is the prerequisite for this whole group.
 | ID | Scenario | | Codegen | Notes |
 | --- | --- | :-: | --- | --- |
 | `ONB-005` | Create a club (wizard) | ⬜ | `-- ownerPrimary clubCreate` | Blocked on a club-creation code from group 2, and **destructive** — every run leaves a club behind. |
-| `ONB-011` | Join a club via a share / QR link | 🟡 | `-- member join` | The `/join/[clubId]` **link** half is automatable — `clubId` is discovered, so this opens a real invite. Scanning the QR with a camera is ⛔. Destructive — creates a join request. |
+| `ONB-011` | Join a club via a share / QR link | ⬜ ⛔ | `-- member join` | The `/join/[clubId]` **link** half is automatable — `clubId` is discovered, so this opens a real invite. Scanning the QR with a camera is ⛔. Destructive — creates a join request. |
 | `ONB-012` | Discover and request a club inside the app | ⬜ | `-- member clubsDiscover` | `/dashboard/clubs`. Destructive. |
 | `OWP-002` | Generate QR / share link | ⬜ | `-- ownerPrimary overview` | Read-only for the owner: the share dialog (sidebar) and the Settings QR tab — `-- ownerPrimary settings` for the second half. **A good early smoke test** — the control is already located as `commonLocators.shareClub`. |
 | `OWP-040` | Empty-state sweep on a brand-new club | ⬜ | `-- ownerPrimary overview` | Needs a fresh club, so it pairs with `ONB-005`. |
@@ -285,7 +300,7 @@ not exist yet**; it is the prerequisite for this whole group.
 | ID | Scenario | | Codegen | Notes |
 | --- | --- | :-: | --- | --- |
 | `MEM-042` | Member sees no create-event control on the calendar | ✅ | `-- member calendar` | `member.blocked.spec.ts`. **No positive control** — nothing proves that selector matches for the owner, so it would pass on a wrong selector. `OWP-009` would close it. |
-| `MEM-006` | Member views the club calendar read-only | 🟡 | `-- member calendar` | **The demo club has no events** — the page reads "No events scheduled". Only the empty-state frame is automatable now; "real classes shown" and "tap an event" need a seeded event. |
+| `MEM-006` | Member views the club calendar read-only | ⬜ | `-- member calendar` | **The demo club has no events** — the page reads "No events scheduled". Only the empty-state frame is automatable now; "real classes shown" and "tap an event" need a seeded event. |
 | `OWP-009` | Edit / cancel / reschedule an event | ⬜ | `-- ownerPrimary calendar` | Destructive. Also closes `MEM-042`'s missing positive control. |
 | `SEN-011` | Teaching-schedule filter on the calendar | ⬜ | `-- sensei calendar` | Read-only, needs events. The per-site view is `-- sensei siteCalendar`. |
 
@@ -343,7 +358,7 @@ not exist yet**; it is the prerequisite for this whole group.
 
 | ID | Scenario | | Codegen | Notes |
 | --- | --- | :-: | --- | --- |
-| `MEM-018` | Edit own profile and avatar | 🟡 | `-- member editProfile` | The read-only view is `-- member profile`. The text fields are automatable; the **avatar upload needs a fixture image**. Destructive but self-reversing. |
+| `MEM-018` | Edit own profile and avatar | ⬜ | `-- member editProfile` | The read-only view is `-- member profile`. The text fields are automatable; the **avatar upload needs a fixture image**. Destructive but self-reversing. |
 | `MEM-019` | Account / security / language settings | 🟡 | `-- member personalSettings` | `member.read-only.spec.ts`. **Step 1 only** — the page loads and offers its tabs. Steps 2–5 all write (password, privacy toggles, push preference, language), so they wait on the mutating milestone. **The sheet lists three tabs; the page renders four** — `Membership` is missing from it and needs adding. Two of the four labels are hardcoded English, not `t(...)` calls — see [`COVERAGE.md`](COVERAGE.md) section 6. The language half overlaps group 17. Billing pane is a STUB — see `MEM-043`. |
 | `MEM-020` | Forced complete-profile / change-password | ⬜ | `-- member changePassword` | Also `-- member completeProfile`. Listed under group 3 too. |
 | `PAR-010` | Parent uses the full standard surface | ⬜ | `-- parent dashboard` | A sweep, mostly re-running MEM scenarios as the parent account. |
@@ -405,7 +420,7 @@ not exist yet**; it is the prerequisite for this whole group.
 
 | ID | Scenario | | Codegen | Notes |
 | --- | --- | :-: | --- | --- |
-| `MEM-011` | Club library is read-only for a member | ✅ | `-- member library` | `member.read-only.spec.ts`. Steps 1 and 3; opening a move and playing it stays manual. Its positive control is `owner.allowed.spec.ts` in the same folder. |
+| `MEM-011` | Club library is read-only for a member | ✅ ⛔ | `-- member library` | `member.read-only.spec.ts`. Steps 1 and 3; opening a move and playing it stays manual. Its positive control is `owner.allowed.spec.ts` in the same folder. |
 | `MEM-009` | Global move library and a move detail | ⬜ | `-- member personalLibrary` | A move detail is `-- member personalLibraryItem` (`moveId` discovered). **Check the sheet first:** `/library` auto-redirects to the first club's library unless `?view=master` (`library/page.tsx` ~line 81), so what you land on is `MEM-011`'s screen. One of the two descriptions is wrong. |
 | `MEM-010` | Global and club warmups | ⬜ | `-- member personalLibraryWarmup` | The club's own is `-- member libraryWarmup`. Read-only. |
 | `MEM-022` | Library shows content for your tier and belt | ⬜ | `-- member library` | Needs a genuinely free-tier account; new accounts default to premium. |
@@ -425,7 +440,7 @@ not exist yet**; it is the prerequisite for this whole group.
 
 | ID | Scenario | | Codegen | Notes |
 | --- | --- | :-: | --- | --- |
-| `MEM-012` | Notification centre and mark read | 🟡 | `-- member notifications` | Reading the list is automatable; **mark-read is a write** and belongs with the mutating milestone. |
+| `MEM-012` | Notification centre and mark read | ⬜ | `-- member notifications` | Reading the list is automatable; **mark-read is a write** and belongs with the mutating milestone. |
 | `MEM-013` | Free tier can contact staff | ⬜ | `-- member personalMessages` | Destructive — sends a message. |
 | `MEM-040` | A plain member cannot start a chat with another plain member | ⬜ | `-- member personalMessages` | Read-only: the contact picker simply does not offer them. A good absence check — pair it with a positive control. |
 | `MEM-023` | Group messaging | ⬜ | `-- member personalMessages` | Two contexts. |
