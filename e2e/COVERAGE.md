@@ -20,6 +20,19 @@ Same day: **codegen groundwork** — 63 route keys, dynamic-id discovery, a
 > green on its first run**, which was the one unverified change — plus `MEM-019`
 > itself at 4.4s. Written from the frontend source rather than a recording, and
 > it passed first time, so it never needed `@needs-verification`.
+>
+> **`npm run test:group:dev -- 04` → 32 passed, 3 failed.** The 3 failures are
+> `SEC-043`, `SEN-042` and the `SEN-044` role-editor half — **exactly the three
+> in section 3, and nothing else.** Both halves of the pairing behaved as
+> documented: `SEN-044`'s owner-level-roles check passed while its role-editor
+> check failed. All 8 owner positive controls were green, so every blocked
+> result in that run is trustworthy.
+>
+> **`SMK-030` passed on its first live run, 27.3s** — all eight sidebar
+> destinations reached and rendered for the owner, including the three whose
+> hrefs are computed (Calendar, Library, Payment). No dead routes today. Like
+> `MEM-019` it was written from the source rather than a recording, so it never
+> carried `@needs-verification`.
 
 Previously: 2026-07-30 (second Bucket A batch: `MEM-002`, `MEM-003`, `SEC-001`,
 `SEN-001`, plus the login form as `SMK-020` / `SMK-021` — which surfaced the
@@ -42,10 +55,19 @@ routes (`MEM-041` alone covers four), 11 of the 43 are positive controls rather
 than scenarios of their own, and `SMK-020` / `SMK-021` are two more with no
 manual sheet to be counted against.
 
-> **Verified result against `dev`, 2026-07-30: 44 passed, 3 failed, 2 skipped**
-> (`npm run test:dev`; Playwright counts the 6 `setup` tests alongside the 41
-> above, for 49 in the report). **All 3 failures are deliberate** — they report
-> open app bugs and are listed in section 3. No flaky results.
+> **Verified result against `dev`, 2026-08-01: 47 passed, 3 failed, 2 skipped**
+> (`npm run test:dev`, 2.7 minutes; Playwright counts the 7 `setup` tests
+> alongside the 43 above). **All 3 failures are deliberate** — they report open
+> app bugs and are listed in section 3. The 2 skips are the `fixme` copy checks
+> in `specs/i18n/`. No flaky results.
+>
+> **The +3 against the previous run reconciles exactly**, which is the point of
+> recording the number at all: `MEM-019`, `SMK-030`, and the sixth `setup`
+> login now that a `parent` session is saved. Nothing else moved, so no
+> previously-passing test changed state.
+>
+> Previously, 2026-07-30: 44 passed, 3 failed, 2 skipped, with 6 `setup` tests
+> for 49 in the report.
 >
 > The second batch was written from the frontend source rather than from a
 > codegen recording, so it carried `@needs-verification` until its first live
