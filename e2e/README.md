@@ -4,9 +4,15 @@ This folder automates scenarios from [`../manual-qa/`](../manual-qa/). Every tes
 maps back to a manual scenario ID (`SEC-040`, `MEM-041`, ...), so a failure here
 can be reported with the same ID you already use in ClickUp.
 
-The manual sheets remain the source of truth. Automation covers the parts a
-machine can judge; the rest stays manual on purpose (see
-[What is not automated](#what-is-not-automated)).
+**The app source is the source of truth.** The sheets lay the groundwork - they
+say which scenarios exist, who runs them and what to look at - but they are
+written by hand, ahead of the build, and they go stale. Where a sheet and the
+code disagree about what the app *does*, **the code wins: correct the sheet,
+then write the test against the corrected version.** Never write a test against
+what a sheet wishes were true. See [Read the code first](#read-the-code-first).
+
+Automation covers the parts a machine can judge; the rest stays manual on
+purpose (see [What is not automated](#what-is-not-automated)).
 
 ---
 
@@ -248,9 +254,26 @@ npm run codegen:dev -- sensei                  # no page -> the dashboard
 npm run codegen -- member calendar             # same, against local
 ```
 
-`<role>` is one of `ownerPrimary`, `coOwner`, `sensei`, `secretary`, `member`.
-`[page]` is any key from `support/routes.ts` - the club id is discovered from
-the account, never typed in.
+`<role>` is one of `ownerPrimary`, `coOwner`, `sensei`, `secretary`, `member`,
+`parent`. `[page]` is any of the **63 keys in `support/routes.ts`** - run
+`npm run codegen:dev` with a bad key to list them all.
+
+**Every id in the URL is discovered, never typed.** `clubId` always was;
+`siteId`, `roomId`, `childId`, `examId`, `moveId`, `articleId` and `ticketId`
+are too, so `codegen:dev -- ownerPrimary roomAttendance` opens a real room three
+levels deep. Each has a resolver in `ID_RESOLVERS` (`scripts/codegen.mjs`) that
+reads the same endpoint the app itself calls, and they resolve in dependency
+order - a room needs its site first. When the club has no such record, the
+script names the scenario that creates one rather than opening a broken URL.
+
+**Every smoke scenario carries its command.** `smoke_testing_scenarios.md` has a
+`Codegen` column on all 17 group tables, so you rarely need to work the role and
+page out yourself - look the scenario up and copy the line.
+
+Adding a route? `support/routes.ts` has three blocks and a naming rule; read the
+comment at the top of it first. Keys are flattened into one table here, so a
+duplicate silently opens the wrong page - `codegen` now fails loudly on one
+rather than letting it through.
 
 Raw `npx playwright codegen` is not a substitute. Three things have to be right
 before a recording is worth anything, and the script is what makes them so:
@@ -317,12 +340,26 @@ mystery.
 mints new ids, so the `clubId` fixture looks it up from `GET /users/clubs`. Pin
 a specific club with `TEST_CLUB_ID` in `.env` if an account belongs to several.
 
+**Six sessions are saved, not five.** `SESSION_ROLES` in `support/roles.ts` is a
+superset of `ACCESS_CONTROL_ROLES`: the battery still runs as five roles, but a
+`parent` session is saved as well, because smoke groups 13 and 14 are entirely
+parent scenarios and codegen cannot open those screens without one. **The cost
+of being on that list:** every spec project depends on `setup`, and Playwright
+skips a dependent project when a dependency test fails - so an account that does
+not exist in the target environment takes the whole suite down, not just its own
+tests. Confirm a new one with `npm run test:setup:dev` before adding it.
+
 ---
 
 ## 5. Adding a scenario
 
-1. Find the scenario in `../manual-qa/` and read its steps and expected result.
-2. Look up which smoke group it belongs to in
+1. **Read the app source for that screen first** - see below. Not the whole
+   codebase; just the page component, its role guard, and the backend route's
+   `checkClubAuthorization(...)`.
+2. Find the scenario in `../manual-qa/` and read its steps and expected result.
+   **Where it disagrees with the code, correct the sheet**, then write the test
+   against the corrected version.
+3. Look up which smoke group it belongs to in
    [`smoke_testing_scenarios.md`](smoke_testing_scenarios.md), and put it in that
    folder under `specs/smoke-testing/`. If the checklist does not list it, it
    belongs in `specs/regression/`.
@@ -332,7 +369,7 @@ a specific club with `TEST_CLUB_ID` in `.env` if an account belongs to several.
    (`member.blocked.spec.ts`) so a report line still says who was signed in. If
    the scenario asserts a control is *absent*, its positive control goes in the
    same folder — see `specs/smoke-testing/README.md`.
-3. Follow the existing shape:
+4. Follow the existing shape:
 
 ```ts
 test('SEC-040 - secretary blocked from Analytics @SEC-040', async ({ page, clubId }) => {
@@ -353,6 +390,42 @@ The convention that makes this useful:
 **Put every new locator in `locators/`, and every new step in `pages/`.**
 A spec must contain neither. See section 3 for the layering, and section 4 for
 finding the selector in the first place.
+
+### Read the code first
+
+The app repos are checked out beside this one (`martial-apps-frontend/`,
+`martial-apps-backend/`) and are **read-only from here** - never edited. Read
+them before writing a test, not after it fails.
+
+**Read only what the scenario needs**, not the codebase:
+
+| Read | For |
+| --- | --- |
+| The page component for that screen | What actually renders, and which controls exist at all |
+| Its role guard | Whether it gates on `userRole` or `clubRole` - they are not the same |
+| The backend route's `checkClubAuthorization(...)` | Whether the server would really refuse the write |
+| `messages/en.json` and `messages/fr.json` | The exact strings, in both languages, for the locator |
+
+**The sheets are groundwork, not evidence.** They are written by hand before or
+alongside the build, so they drift: they miss controls that were added, describe
+tabs that were removed, and occasionally contradict each other. `MEM-019` is the
+worked example - the sheet lists three settings tabs and the page renders four,
+so `Membership` was missing from the sheet entirely and the test asserts all
+four. `MEM-041` and `MEM-042` are two more; both sheets were corrected.
+
+**When the sheet is wrong, fix the sheet.** A test written to match a stale
+sheet either fails forever for no reason, or passes while asserting something
+the app does not do. Both are worse than no test.
+
+> **The one exception, and it matters:** "the code wins" settles what the app
+> **does**, never whether that is **correct**. Where the behaviour itself is the
+> defect, you assert the behaviour the app is *supposed* to have and leave the
+> test **red** - see section 7. `SEC-043`, `SEN-042` and `SEN-044` are all in
+> that state today. Copying the code's behaviour into the expected result would
+> record a bug as intended, which is the one thing this suite must never do.
+>
+> The distinction in one line: **read the code to learn what is there; use
+> judgement to decide whether it should be.**
 
 ---
 

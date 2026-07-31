@@ -3,7 +3,7 @@ import { BasePage, RENDER_TIMEOUT } from './base.page';
 import { personalLocators } from '../locators/personal.locators';
 import type { NamedControl } from './club-section.page';
 
-export type PersonalSection = 'belts' | 'progress';
+export type PersonalSection = 'belts' | 'progress' | 'settings';
 
 /**
  * Any PERSONAL screen - one with no club id in its URL.
@@ -35,6 +35,15 @@ export class PersonalSectionPage extends BasePage {
    * (belts/page.tsx ~line 45) and decides the Eligible Students control from
    * the role it reports (~line 130). Judge either before it answers and the
    * result describes the loading frame, not the role.
+   *
+   * `/settings` does not read the club role for its TAB BAR - that is gated on
+   * the profile type - but it is covered by the same wait because the
+   * authenticated layout issues `GET /users/clubs` on every page beneath it,
+   * so the response arrives here too and the settings page's own club-scoped
+   * content (the privacy toggles) depends on it. If a future personal route
+   * ever loads WITHOUT that call, the wait falls through on its timeout rather
+   * than failing - correct, but it would cost the full CLUB_ROLE_TIMEOUT, so
+   * give that route a plain `goto` instead.
    */
   async expectLoaded(route: string): Promise<void> {
     await this.gotoAndAwaitClubRole(route);

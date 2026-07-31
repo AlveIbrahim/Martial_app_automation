@@ -89,4 +89,86 @@ export const personalLocators = {
    */
   progressBeltPath: (page: Page): Locator =>
     page.getByText(/^(Kyu Ranks|Grades Kyu)$/i).first(),
+
+  /**
+   * `/settings` - the user's OWN settings, not a club's.
+   *
+   * The route key is `personalSettings` in support/routes.ts, never `settings`:
+   * codegen.mjs flattens the top-level and club-scoped keys into one table, so a
+   * top-level `settings` would be shadowed by the club-scoped one. Same trap as
+   * `progress` / `personalProgress`.
+   *
+   * RENDERED TWICE. The page returns a mobile branch (`sm:hidden`,
+   * settings/page.tsx ~line 688) and a desktop branch (`hidden sm:block`, ~line
+   * 1506), each with its own <h1> and its own full tab bar. The breakpoint is
+   * `sm:` (640px), NOT the `lg:` (1024px) the members roster splits on - so the
+   * branch that executes here is the DESKTOP one at the suite's 1280px.
+   * getByRole excludes hidden elements, so exactly one of each is matched and
+   * neither `.first()` nor `toHaveCount(0)` is thrown off. Re-record at the
+   * target width before reusing any of these in a phone-sized test.
+   *
+   * `settings.title`, present in both messages files: EN "Settings" /
+   * FR "Paramètres" (~lines 701 and 1519).
+   */
+  settings: (page: Page): Locator =>
+    page.getByRole('heading', { name: /^(Settings|Param[èe]tres)$/i }).first(),
+
+  /**
+   * The four tabs a parent-profile account is offered (~line 727 mobile, ~1539
+   * desktop). A child profile gets a single "Screen Time" tab instead, and the
+   * whole bar is gated on `currentProfileType === 'parent'`.
+   *
+   * A fifth, "Billing & Subscription", is behind `SHOW_BILLING_SECTION = false`
+   * (~line 34) and renders for nobody today. That is the sheet's "billing pane
+   * currently hidden" note and MEM-043's STUB - do not assert it, and do not
+   * file it.
+   */
+  settingsPrivacyTab: (page: Page): Locator =>
+    page.getByRole('button', { name: /^(Club Privacy|Confidentialit[ée] du club)$/i }),
+
+  /**
+   * `settings.securityTab`. The FR alternative is listed for the day the
+   * translation lands: fr.json currently holds the ENGLISH string "Security"
+   * for this key, so a French user reads it in English. Cosmetic, and recorded
+   * in COVERAGE.md rather than asserted here.
+   */
+  settingsSecurityTab: (page: Page): Locator =>
+    page.getByRole('button', { name: /^(Security|S[ée]curit[ée])$/i }),
+
+  /**
+   * HARDCODED, not translated. These two labels are literal English strings in
+   * the JSX (`label: 'Notifications'`, `label: 'Membership'`) rather than
+   * `t(...)` calls, so they are the same in every language - unlike every other
+   * tab beside them. That is a real localisation defect, logged in COVERAGE.md
+   * section 6; it is not a missing key, so RAW_I18N_KEY would never catch it.
+   *
+   * The FR alternatives are what a fixed build should render. "Notifications" is
+   * already correct French, so only Membership actually changes.
+   */
+  settingsNotificationsTab: (page: Page): Locator =>
+    page.getByRole('button', { name: /^Notifications$/i }),
+  settingsMembershipTab: (page: Page): Locator =>
+    page.getByRole('button', { name: /^(Membership|Adh[ée]sion)$/i }),
+
+  /**
+   * `/dashboard/messages` - where the sidebar's Messages actually points.
+   *
+   * NOT `/messages`, which is a second, separate page component that also
+   * exists. The route key for this one is `dashboardMessages`.
+   *
+   * The heading is `messages.title` and belongs to ConversationList, not the
+   * page (ConversationList.tsx ~line 89) - so it proves the conversation list
+   * itself mounted, which is the real content, rather than just the page frame.
+   * EN and FR are both "Messages"; that is correct French, not a missing
+   * translation.
+   */
+  messages: (page: Page): Locator =>
+    page.getByRole('heading', { name: /^Messages$/i }).first(),
+
+  /**
+   * `/support`. `support.pageTitle`, present in both messages files:
+   * EN "Support" / FR "Assistance".
+   */
+  supportDesk: (page: Page): Locator =>
+    page.getByRole('heading', { name: /^(Support|Assistance)$/i }).first(),
 };

@@ -2,7 +2,7 @@ import { test as setup, expect } from '@playwright/test';
 import fs from 'node:fs';
 import path from 'node:path';
 import { env, accessTokenCookie } from '../config/environments';
-import { ACCESS_CONTROL_ROLES, assertCredentialsPresent, ROLES } from '../support/roles';
+import { SESSION_ROLES, assertCredentialsPresent, ROLES } from '../support/roles';
 
 /**
  * Logs in each role ONCE via the API and saves its session to
@@ -21,7 +21,7 @@ import { ACCESS_CONTROL_ROLES, assertCredentialsPresent, ROLES } from '../suppor
 // could otherwise grab it first and skip it every time.
 setup.describe.configure({ mode: 'serial' });
 
-for (const role of ACCESS_CONTROL_ROLES) {
+for (const role of SESSION_ROLES) {
   setup(`authenticate ${role} (${ROLES[role].label})`, async ({ request }) => {
     const { email, password, label } = assertCredentialsPresent(role);
 
@@ -82,13 +82,13 @@ setup('seeded accounts land on the dashboard', async ({ browser }) => {
 
   // If the logins above failed there is nothing to check here; skip rather
   // than adding a second, noisier failure on top of the real one.
-  const missing = ACCESS_CONTROL_ROLES.filter((r) => !fs.existsSync(env.authFile(r)));
+  const missing = SESSION_ROLES.filter((r) => !fs.existsSync(env.authFile(r)));
   setup.skip(
     missing.length > 0,
     `Skipped: no saved session for ${missing.join(', ')} - fix the login failures above first.`,
   );
 
-  for (const role of ACCESS_CONTROL_ROLES) {
+  for (const role of SESSION_ROLES) {
     const ctx = await browser.newContext({ storageState: env.authFile(role) });
     const page = await ctx.newPage();
     try {

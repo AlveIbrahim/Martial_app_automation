@@ -62,6 +62,23 @@ export const ACCESS_CONTROL_ROLES: RoleKey[] = [
   'member',
 ];
 
+/**
+ * Every role `setup/auth.setup.ts` saves a session for.
+ *
+ * A superset of ACCESS_CONTROL_ROLES: the battery does not sign in as the
+ * parent, but smoke groups 13 (household) and 14 (child profile) are entirely
+ * parent scenarios - 18 rows - and `scripts/codegen.mjs` cannot open any of
+ * those screens without a saved session. So the session is saved for everyone,
+ * and the battery still runs as the five roles above.
+ *
+ * THE COST OF BEING ON THIS LIST: every spec project depends on `setup`, and
+ * Playwright skips a dependent project when any dependency test fails. So if
+ * the parent account does not exist in the target environment, its login goes
+ * red and the WHOLE suite is skipped, not just the parent tests. Confirm a new
+ * account with `npm run test:setup:dev` before adding it here.
+ */
+export const SESSION_ROLES: RoleKey[] = [...ACCESS_CONTROL_ROLES, 'parent'];
+
 export function assertCredentialsPresent(role: RoleKey): RoleCredentials {
   const creds = ROLES[role];
   if (!creds.email) {

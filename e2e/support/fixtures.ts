@@ -6,6 +6,7 @@ import { ClubSectionPage, type ClubSection } from '../pages/club-section.page';
 import { PersonalSectionPage, type PersonalSection } from '../pages/personal-section.page';
 import { DashboardPage } from '../pages/dashboard.page';
 import { LoginPage } from '../pages/login.page';
+import { NavigationPage } from '../pages/navigation.page';
 
 /**
  * The analytics consent banner is a real source of flakiness.
@@ -42,6 +43,8 @@ interface TestFixtures {
   personalSection: (section: PersonalSection) => PersonalSectionPage;
   /** The personal home dashboard - not club-scoped. */
   dashboardPage: DashboardPage;
+  /** The primary sidebar and the destinations it offers. */
+  navigationPage: NavigationPage;
   /**
    * The login form. Only the authentication specs need this - every other test
    * gets its session from setup/auth.setup.ts via `asRole(...)`.
@@ -112,6 +115,10 @@ export const test = base.extend<TestFixtures, WorkerFixtures>({
 
   dashboardPage: async ({ page }, use) => {
     await use(new DashboardPage(page));
+  },
+
+  navigationPage: async ({ page }, use) => {
+    await use(new NavigationPage(page));
   },
 
   loginPage: async ({ page }, use) => {

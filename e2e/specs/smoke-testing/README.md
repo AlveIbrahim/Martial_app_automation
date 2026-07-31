@@ -21,7 +21,7 @@ smoke-testing/
 ├── 09-calendar-scheduling/     read the schedule, edit it as staff     1 spec
 ├── 10-attendance-qr/           room attendance and the QR flow         1 spec
 ├── 11-exams-grading-belts/     assess a student and move them up       2 specs
-├── 12-profile/                 see and change your own details
+├── 12-profile/                 see and change your own details        1 spec
 ├── 13-household/               create a family
 ├── 14-child-profile/           PIN, screen time, the child surface
 ├── 15-video-library/           the content students come for           2 specs

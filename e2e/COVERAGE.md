@@ -1,7 +1,8 @@
 # Automation coverage: what is written, what is left
 
 Tracks which of the 159 manual scenarios in [`../manual-qa/`](../manual-qa/) have
-Playwright automation. The manual sheets stay the source of truth; this file
+Playwright automation. **The app source is the source of truth for what the app
+does** (README section 5); the sheets describe intended behaviour, and this file
 only records automation status.
 
 For the **smoke pass specifically** — the 17-group checklist and which scenario
@@ -9,7 +10,18 @@ proves each group — see [`smoke_testing_scenarios.md`](smoke_testing_scenarios
 This file is the wider view: every scenario, the difficulty buckets, and what to
 automate next.
 
-Last updated: 2026-07-30 (second Bucket A batch: `MEM-002`, `MEM-003`, `SEC-001`,
+Last updated: 2026-08-01 (`MEM-019` step 1 — the first test in smoke group 12,
+which had none. Surfaced the hardcoded-English tab labels in section 6 item 1d.
+Same day: **codegen groundwork** — 63 route keys, dynamic-id discovery, a
+`parent` session, and a `Codegen` column on every smoke table. See section 5.)
+
+> **Verified against `dev`, 2026-08-01: `npm run test:group:dev -- 12` → 8
+> passed.** That is the 7 setup tests — now including the **`parent` login,
+> green on its first run**, which was the one unverified change — plus `MEM-019`
+> itself at 4.4s. Written from the frontend source rather than a recording, and
+> it passed first time, so it never needed `@needs-verification`.
+
+Previously: 2026-07-30 (second Bucket A batch: `MEM-002`, `MEM-003`, `SEC-001`,
 `SEN-001`, plus the login form as `SMK-020` / `SMK-021` — which surfaced the
 credential-leak bug in section 3b. Its automated test, `SMK-023`, was written,
 confirmed the bug, and then pulled from the suite for now at QA's request).
@@ -20,13 +32,13 @@ confirmed the bug, and then pulled from the suite for now at QA's request).
 
 | Status | Scenario IDs | Share |
 | --- | ---: | ---: |
-| Fully automated | 16 | 10% |
-| Partially automated | 8 | 5% |
-| Not started | 135 | 85% |
+| Fully automated | 17 | 11% |
+| Partially automated | 9 | 6% |
+| Not started | 133 | 84% |
 | **Total** | **159** | |
 
-That's 41 executable test cases, because several scenarios fan out over multiple
-routes (`MEM-041` alone covers four), 11 of the 41 are positive controls rather
+That's 43 executable test cases, because several scenarios fan out over multiple
+routes (`MEM-041` alone covers four), 11 of the 43 are positive controls rather
 than scenarios of their own, and `SMK-020` / `SMK-021` are two more with no
 manual sheet to be counted against.
 
@@ -105,6 +117,7 @@ relative to `specs/`:
 | `SEN-001` | Sensei reaches the club they teach at | 1 | `04/sensei.allowed.spec.ts` |
 | `SMK-020` | Sign in through the login form | 1 | `03/login-form.spec.ts` |
 | `SMK-021` | A wrong password is refused | 1 | `03/login-form.spec.ts` |
+| `SMK-030` | Every primary nav destination loads for the owner | 1 | `04/owner.nav-sweep.spec.ts` |
 
 `SMK-020` and `SMK-021` have no manual sheet — they are new IDs from
 `smoke_testing_scenarios.md`, which is why the 159 total does not move for them.
@@ -130,6 +143,7 @@ to the sheet, not the test. The last three are simply waiting on seeded data.
 | `MEM-008` | Steps 1 and 3: the sites list renders; no Add Site / Add Room for a member | Step 2, opening a site then a room | Needs a seeded room to click into. The guard itself is a real `clubRole` check (`site/page.tsx` ~line 673), not the `userRole` alias behind section 3. |
 | `MEM-011` | Steps 1 and 3: the club library renders; no manage control for a member | Step 2, opening a move and playing its media | Video playback is a visual judgement and stays manual. |
 | `MEM-003` | Step 1: `/progress` renders the belt progression path | Steps 2–3, the number comparisons | Same blocker as `MEM-004`, and the same reason it is not marked done: the seeded member has no attendance, so "the total matches the per-curriculum breakdown" is `0 == 0` and would pass whether or not either number is computed correctly. Needs seeded attendance. |
+| `MEM-019` | Step 1: `/settings` renders and offers all four tabs | Steps 2–5 | **Every remaining step writes** — change password, flip privacy toggles, save a push preference, switch UI language. They belong with the mutating-tests milestone, not with a read-only suite that runs against shared `dev`. Step 5 also overlaps group 17 (`XC-001`), which is where the language switch should be asserted. **The sheet needs correcting:** it lists three tabs, the page renders four (`Membership` is absent from it). |
 
 ### Supporting infrastructure (not scenario-mapped)
 
@@ -280,9 +294,9 @@ does not produce a URL matching `/[?&]password=/`. Re-add it, restore its row in
 
 ## 4. What is left
 
-139 scenarios, triaged by how hard they are to automate.
+138 scenarios, triaged by how hard they are to automate.
 
-### Bucket A — cleanly automatable (42 remaining)
+### Bucket A — cleanly automatable (41 remaining)
 
 Deterministic UI flows with clear assertions, needing no special data setup
 beyond the seeded demo club. **This is the highest-value work remaining.**
@@ -290,7 +304,7 @@ beyond the seeded demo club. **This is the highest-value work remaining.**
 | Sheet | Remaining IDs | Count |
 | --- | --- | ---: |
 | `role-owner-primary` | `ONB-003`, `OWP-001`–`OWP-009`, `OWP-013`, `OWP-016`, `OWP-023`, `OWP-025`, `OWP-027`, `OWP-028`, `OWP-029` | 17 |
-| `role-member` | `MEM-006`, `MEM-009`, `MEM-010`, `MEM-012`, `MEM-016`, `MEM-017`, `MEM-019`, `MEM-021` | 8 |
+| `role-member` | `MEM-006`, `MEM-009`, `MEM-010`, `MEM-012`, `MEM-016`, `MEM-017`, `MEM-021` | 7 |
 | `role-parent` | `PAR-001`–`PAR-005`, `PAR-009`, `PAR-010`, `PAR-040`, `PAR-041` | 9 |
 | `role-sensei` | `SEN-002`, `SEN-003`, `SEN-006` | 3 |
 | `role-secretary` | `SEC-004`, `SEC-005`, `SEC-007` | 3 |
@@ -384,6 +398,23 @@ opens the recorder signed in as that role, at the suite's width, with the
 consent banner suppressed. Treat what it emits as a draft — section 4 of the
 README covers what has to change before it becomes a locator.
 
+**You should not have to work out the role and page yourself.**
+[`smoke_testing_scenarios.md`](smoke_testing_scenarios.md) carries a `Codegen`
+column on all 17 group tables, giving the exact arguments for every scenario —
+and saying why, where a screen cannot be opened at all (an email inbox, the
+admin app, a real camera). `support/routes.ts` holds 63 route keys covering
+every screen the checklist reaches; `codegen` lists them all if you pass one it
+does not know.
+
+**Ids beyond the club id are discovered too**, as of 2026-08-01: `siteId`,
+`roomId`, `childId`, `examId`, `moveId`, `articleId` and `ticketId` each have a
+resolver in `ID_RESOLVERS` (`scripts/codegen.mjs`), reading the same endpoints
+the frontend's own RTK Query services call. They resolve in dependency order, so
+`-- ownerPrimary roomAttendance` finds a site, then a room inside it, then opens
+the attendance screen three levels deep. An empty list is reported as a fact
+about the seeded data — naming the scenario that creates the record — rather
+than as a script error.
+
 Four traps this suite has already hit — check each:
 
 | Trap | What to do |
@@ -449,12 +480,43 @@ genuine defect, report it for filing — see section 7 of the README.
    anchors on `belts.kyuRanks`, which exists in both, so the behavioural result
    is not hostage to the label.
 
+1e. **Open bug — the club payments page H1 is hardcoded English.**
+   `<h1>Payments</h1>` (`myClub/[clubID]/payments/page.tsx` ~line 202), with no
+   `t(...)` call, so a French user reads the page title in English. **Third
+   instance of this exact shape**, after the two `/settings` tabs in item 1d —
+   which makes it a pattern worth raising as one, not three separate tickets.
+   Like those, it is invisible to `RAW_I18N_KEY` and to the i18n specs, because
+   a hardcoded string is a perfectly valid string. Found while writing
+   `SMK-030`; that test anchors on the heading, so the sweep is not hostage to
+   the label, but nothing watches the label itself.
+
    **The cost of that tolerance, stated plainly:** a future missing key on the
    belts page will not turn `MEM-002` red. Only the `fixme` spec covers it, and
    that spec cannot run until either the keys land or the suite can drive the
    app in French — the UI language comes from the user's profile, so switching
    it is a write. An `XC-001` sweep for `RAW_I18N_KEY` across screens is the
    real fix on the QA side, and would have caught both of these unprompted.
+
+1d. **Open bug — two `/settings` tab labels are hardcoded English.**
+   A third failure mode, and the only one of the three that no key-based check
+   could ever catch. `Notifications` and `Membership` are literal English
+   strings in the JSX (`label: 'Notifications'`, `label: 'Membership'` —
+   `settings/page.tsx` ~lines 730-731 and ~1542-1543) rather than `t(...)`
+   calls, so they render in English in every language, sitting beside two tabs
+   that do translate. Because they are valid strings and not key paths, both
+   `RAW_I18N_KEY` and the i18n specs are blind to them — **only a human reading
+   the page in French, or an `XC-001` sweep comparing EN against FR, would find
+   this.** Found by reading the source while writing `MEM-019`.
+
+   Two smaller instances alongside it, of the item-1b kind rather than this one:
+   `settings.securityTab` and `settings.screenTimeTab` are present in
+   `fr.json` but hold the ENGLISH values ("Security", "Screen Time"). Present,
+   so nothing is missing; just untranslated.
+
+   `MEM-019` anchors on all four tabs by accessible name, so the behavioural
+   result is not hostage to any of this — but **the cost, stated plainly: no
+   test watches these labels**, and a future hardcoded label on that page will
+   not turn anything red.
 
 1c. **Minor — duplicate DOM ids on `/login` and `/`.** Both pages render their
    whole content twice, once per responsive branch (`login/page.tsx` ~lines 49
@@ -473,10 +535,27 @@ genuine defect, report it for filing — see section 7 of the README.
    saves fail — but users are shown controls that can never succeed. Gating
    those screens on `clubRole` would close it. Covers `SEC-043`, `SEN-042` and
    the `SEN-044` role-editor half.
-3. **No `data-testid` attributes anywhere**, and the "Access Denied" block is
-   copy-pasted across 9+ pages in three string variants. A single shared
-   component with a test id would remove the largest source of fragility in
-   this suite.
+3. **Almost no test attributes**, and the "Access Denied" block is copy-pasted
+   across 9+ pages in three string variants. A single shared component with a
+   test id would remove the largest source of fragility in this suite.
+
+   **One exception, found while writing `SMK-030`:** the primary navigation
+   already carries `data-track="nav:<key>"` on every item
+   (`DesktopSidebar.tsx` ~line 268), for analytics rather than for testing —
+   but it works perfectly as a test hook, and `nav.locators.ts` uses it. It is
+   the proof of what item 3 is asking for: those eight locators need no EN|FR
+   alternation and survive the sidebar collapsing, where the text label is not
+   rendered at all. **Extending the same convention to the denial block and the
+   role dropdown would be the single highest-value change for this suite** —
+   and it is a smaller ask than "add data-testid everywhere", because the
+   pattern already exists in the codebase.
+
+   Two caveats that came with it, both now encoded in the locator file:
+   `BottomNavigation.tsx` (~line 161) reuses the SAME attribute values, so the
+   locators are `:visible`-scoped — a raw CSS locator, unlike `getByRole`,
+   matches hidden nodes and would otherwise resolve to two. And the phone bar
+   is a **different set of six**, dropping Messages and Progress, so it is not
+   the sidebar restyled.
 4. **Dead code worth removing:** `TransferOwnershipDialog` in
    `members/ConfirmationDialogs.tsx` is unreachable —
    `setTransferOwnershipConfirm` is never called with a member, only with

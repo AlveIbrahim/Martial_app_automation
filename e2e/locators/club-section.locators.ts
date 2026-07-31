@@ -62,6 +62,20 @@ export const clubSectionLocators = {
   overallAttendance: (page: Page): Locator =>
     page.getByRole('heading', { name: /^(Overall Attendance|Pr[ée]sence Globale)$/i }).first(),
 
+  /**
+   * The club's payments screen - where the sidebar's Payment lands for an
+   * OWNER. A non-owner is sent to `/user-payments` instead, a different page
+   * (DesktopSidebar.tsx ~lines 210-223), so this marker is owner-only.
+   *
+   * NOT ANCHORED TO A TRANSLATION, because there is not one: the heading is a
+   * hardcoded English `<h1>Payments</h1>` (payments/page.tsx ~line 202) with no
+   * `t(...)` call, so a French user reads it in English. Third instance of that
+   * bug in this app - COVERAGE.md section 6 item 1d. The FR alternative below
+   * is what a fixed build should render, and costs nothing to carry now.
+   */
+  payments: (page: Page): Locator =>
+    page.getByRole('heading', { name: /^(Payments|Paiements)$/i }).first(),
+
   /** Management controls that must not render for the wrong role. */
   createEvent: (page: Page): Locator =>
     page.getByRole('button', {

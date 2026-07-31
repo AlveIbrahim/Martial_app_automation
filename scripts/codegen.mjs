@@ -69,8 +69,8 @@ const CONSENT_KEY = 'analytics_consent';
 const CONSENT_DATE_KEY = 'analytics_consent_date';
 const CONSENT_SCOPE = 'essential';
 
-/** Mirrors ACCESS_CONTROL_ROLES in e2e/support/roles.ts - the roles auth.setup.ts saves a session for. */
-const ROLES = ['ownerPrimary', 'coOwner', 'sensei', 'secretary', 'member'];
+/** Mirrors SESSION_ROLES in e2e/support/roles.ts - the roles auth.setup.ts saves a session for. */
+const ROLES = ['ownerPrimary', 'coOwner', 'sensei', 'secretary', 'member', 'parent'];
 
 const DEFAULT_PAGE = 'dashboard';
 
@@ -141,13 +141,22 @@ function loadRoutes() {
   const src = fs.readFileSync(file, 'utf8');
   const routes = {};
 
-  const top = src.match(/export const routes = \{([\s\S]*?)\n {2}club:/);
+  // Block 1: TOP_LEVEL - single-quoted, no placeholders.
+  const top = src.match(/const TOP_LEVEL = \{([\s\S]*?)\n\} as const;/);
   for (const m of (top?.[1] ?? '').matchAll(/^\s*(\w+):\s*'([^']+)'/gm)) {
     routes[m[1]] = m[2];
   }
 
-  const club = src.match(/club:\s*\(\s*clubId[^)]*\)\s*=>\s*\(\{([\s\S]*?)\n {2}\}\)/);
+  // Block 2: routes.club(clubId) - backticked, `${clubId}` left un-evaluated.
+  const club = src.match(/club:\s*\(\s*clubId[^)]*\)\s*=>\s*\(\{([\s\S]*?)\n {2}\}\),/);
   for (const m of (club?.[1] ?? '').matchAll(/^\s*(\w+):\s*`([^`]+)`/gm)) {
+    routes[m[1]] = m[2];
+  }
+
+  // Block 3: DYNAMIC_ROUTE_TEMPLATES - single-quoted so their `${siteId}` and
+  // friends survive as literal text for resolvePlaceholders() to fill in.
+  const dynamic = src.match(/export const DYNAMIC_ROUTE_TEMPLATES = \{([\s\S]*?)\n\} as const;/);
+  for (const m of (dynamic?.[1] ?? '').matchAll(/^\s*(\w+):\s*'([^']+)'/gm)) {
     routes[m[1]] = m[2];
   }
 
@@ -157,7 +166,158 @@ function loadRoutes() {
         `Its shape has probably changed - update the parser in scripts/codegen.mjs.`,
     );
   }
+
+  // A key defined twice means one route silently shadows the other and this
+  // script opens the wrong page - the exact bug the naming rules in routes.ts
+  // exist to prevent. Cheap to detect here, so detect it.
+  const keys = [...src.matchAll(/^\s{2}(\w+):\s*['`]/gm)].map((m) => m[1]);
+  const seen = new Set();
+  const duplicates = [...new Set(keys.filter((k) => seen.size === seen.add(k).size))];
+  if (duplicates.length > 0) {
+    fail(
+      `Duplicate route key(s) in ${path.relative(ROOT, file)}: ${duplicates.join(', ')}.\n` +
+        `The three blocks are flattened into one table here, so one of each pair ` +
+        `is unreachable. Rename the personal one with a "personal" prefix - see ` +
+        `the collision note at the top of that file.`,
+    );
+  }
+
   return routes;
+}
+
+/* ------------------------------------------------------------- placeholders */
+
+/**
+ * How to discover each id a route can ask for, beyond the club id.
+ *
+ * Ordered by dependency: `siteId` must resolve before `roomId`, because the
+ * rooms endpoint is nested under a site. Object key order is insertion order in
+ * JS, and resolvePlaceholders relies on it.
+ *
+ * Each entry says where to GET the list, how to dig the array out of the
+ * response body, and what to say when the list comes back empty - which is the
+ * common case on the seeded demo club, and is a fact about the DATA, not a bug
+ * in this script. The endpoints were read out of the frontend's RTK Query
+ * services (src/store/services/*.ts), which is where the app's own calls live.
+ */
+const ID_RESOLVERS = {
+  siteId: {
+    endpoint: (ids) => `/clubs/${ids.clubId}/sites`,
+    pick: (body) => body?.data?.sites ?? body?.data ?? [],
+    idOf: (item) => item?.siteId ?? item?.id,
+    empty: 'This club has no sites. Create one first (OWP-003), or pick a club that has one.',
+  },
+  roomId: {
+    endpoint: (ids) => `/clubs/${ids.clubId}/sites/${ids.siteId}/rooms`,
+    pick: (body) => body?.data?.rooms ?? body?.data ?? [],
+    idOf: (item) => item?.roomId ?? item?.id,
+    empty: 'That site has no rooms. Create one first (OWP-004).',
+  },
+  examId: {
+    endpoint: (ids) => `/clubs/${ids.clubId}/exams`,
+    pick: (body) => body?.data?.exams ?? body?.data ?? [],
+    idOf: (item) => item?.examId ?? item?.id,
+    empty: 'This club has no exams. Schedule one first (OWP-019).',
+  },
+  moveId: {
+    endpoint: (ids) => `/clubs/${ids.clubId}/moves`,
+    pick: (body) => body?.data?.moves ?? body?.data ?? [],
+    idOf: (item) => item?.moveId ?? item?.id,
+    empty: 'This club library has no moves. Add one first (OWP-026).',
+  },
+  articleId: {
+    endpoint: () => '/help/articles',
+    pick: (body) => body?.data?.articles ?? body?.data ?? [],
+    idOf: (item) => item?.articleId ?? item?.id,
+    empty:
+      'The help centre has no articles - it renders "No articles found". ' +
+      'COVERAGE.md records this as the blocker for MEM-016 step 2.',
+  },
+  ticketId: {
+    endpoint: () => '/support/tickets',
+    pick: (body) => body?.data?.tickets ?? body?.data ?? [],
+    idOf: (item) => item?.ticketId ?? item?.id,
+    empty: 'This account has no support tickets. Open one first (MEM-017 step 2).',
+  },
+  /**
+   * Two hops: the household comes from /households/current, and the child list
+   * hangs off it. Resolved as one step because nothing else needs householdId.
+   */
+  childId: {
+    endpoint: () => '/households/current',
+    pick: (body) => (body?.data ? [body.data] : []),
+    idOf: (item) => item?.householdId ?? item?.id,
+    then: {
+      endpoint: (ids, parentId) => `/households/${parentId}/child-profiles`,
+      pick: (body) => body?.data?.childProfiles ?? body?.data ?? [],
+      idOf: (item) => item?.childProfileId ?? item?.id,
+    },
+    empty:
+      'This account has no household, or the household has no child profile. ' +
+      'Create them first (ONB-020, ONB-021) - and note those need the parent role.',
+  },
+};
+
+/** GET a list and return the first id in it, or fail with the resolver's message. */
+async function resolveOne(ctx, target, name, spec, ids, role) {
+  const url = `${target.apiURL}${spec.endpoint(ids)}`;
+  const res = await ctx.get(url, { headers: { 'x-app-id': target.appId } });
+
+  if (!res.ok()) {
+    fail(
+      `Could not resolve \${${name}}: GET ${spec.endpoint(ids)} returned ${res.status()} ` +
+        `for "${role}".\n` +
+        `If that is a 403, this role may simply not be allowed to list them - try ` +
+        `ownerPrimary.`,
+    );
+  }
+
+  const list = spec.pick(await res.json());
+  const first = Array.isArray(list) ? list.find((item) => spec.idOf(item)) : undefined;
+  if (!first) fail(`Could not resolve \${${name}}: ${spec.empty}`);
+
+  return spec.idOf(first);
+}
+
+/**
+ * Fill every `${placeholder}` a route asks for.
+ *
+ * clubId is already resolved by discoverClubId; everything else comes from
+ * ID_RESOLVERS, in declaration order so nested ids get their parent first.
+ * Only the placeholders the chosen route actually contains are looked up, so
+ * opening a club page never calls the households endpoint.
+ */
+async function resolvePlaceholders(ctx, target, route, ids, role) {
+  const wanted = new Set([...route.matchAll(/\$\{(\w+)\}/g)].map((m) => m[1]));
+  wanted.delete('clubId');
+  if (wanted.size === 0) return ids;
+
+  const unknown = [...wanted].filter((name) => !Object.hasOwn(ID_RESOLVERS, name));
+  if (unknown.length > 0) {
+    fail(
+      `Route contains \${${unknown[0]}}, which has no resolver.\n` +
+        `Add one to ID_RESOLVERS in scripts/codegen.mjs - it needs the endpoint ` +
+        `that lists them and how to read an id out of the response.`,
+    );
+  }
+
+  const resolved = { ...ids };
+  for (const [name, spec] of Object.entries(ID_RESOLVERS)) {
+    if (!wanted.has(name)) continue;
+
+    let value = await resolveOne(ctx, target, name, spec, resolved, role);
+    if (spec.then) {
+      const res = await ctx.get(`${target.apiURL}${spec.then.endpoint(resolved, value)}`, {
+        headers: { 'x-app-id': target.appId },
+      });
+      const list = res.ok() ? spec.then.pick(await res.json()) : [];
+      const first = Array.isArray(list) ? list.find((item) => spec.then.idOf(item)) : undefined;
+      if (!first) fail(`Could not resolve \${${name}}: ${spec.empty}`);
+      value = spec.then.idOf(first);
+    }
+    resolved[name] = value;
+  }
+  return resolved;
 }
 
 /* -------------------------------------------------------------------- args */
@@ -401,18 +561,22 @@ async function main() {
 
   const ctx = await request.newContext({ storageState: authFile });
   let state;
-  let clubId;
+  let ids = {};
   try {
     if (accessExpired) await refreshAccessToken(ctx, target, setupCommand);
     if (route.includes('${clubId}')) {
-      clubId = await discoverClubId(ctx, target, role, setupCommand);
+      ids.clubId = await discoverClubId(ctx, target, role, setupCommand);
     }
+    // Anything else the route asks for - siteId, roomId, childId, ... - is
+    // looked up the same way, from this role's own session.
+    ids = await resolvePlaceholders(ctx, target, route, ids, role);
     state = await ctx.storageState();
   } finally {
     await ctx.dispose();
   }
 
-  const url = target.baseURL + route.replace('${clubId}', clubId ?? '');
+  const url =
+    target.baseURL + route.replace(/\$\{(\w+)\}/g, (_m, name) => ids[name] ?? '');
   const storageFile = writeTempState(state, target.baseURL);
 
   // The temp file holds live tokens. Remove it however this process ends -
@@ -429,8 +593,12 @@ async function main() {
   };
   process.on('exit', cleanup);
 
+  const resolvedNote = Object.entries(ids)
+    .map(([name, value]) => `  ${name} ${value}`)
+    .join('');
+
   console.log(
-    `\ncodegen  ${target.name}  as ${role}  ${page}${clubId ? `  club ${clubId}` : ''}\n` +
+    `\ncodegen  ${target.name}  as ${role}  ${page}${resolvedNote}\n` +
       `         ${url}\n` +
       `         signed in${accessExpired ? ' (token refreshed)' : ''}, ` +
       `consent suppressed, ${VIEWPORT.replace(',', 'x')}\n\n` +
