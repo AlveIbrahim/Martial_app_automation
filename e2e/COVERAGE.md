@@ -470,9 +470,11 @@ The app repos are checked out beside this one (`martial-apps-frontend/`,
    component, its role guard, and the route's `checkClubAuthorization(...)` on
    the backend. Read-only; the app repos are not edited from here.
 2. **Compare against the `manual-qa/` sheet** for that scenario ID.
-3. **Where they disagree, the code wins.** Correct the sheet to describe what
-   the app does, then write the test against that. A test that encodes what the
-   sheet wishes were true is worse than no test.
+3. **Where they disagree, the code wins — but ask before editing the sheet.**
+   Say what disagrees, quote the code that settles it, and wait. Then correct the
+   sheet to describe what the app does and write the test against that. A test
+   that encodes what the sheet wishes were true is worse than no test; a sheet
+   silently rewritten to match a bug is worse than both.
 4. **Write the spec**, and make sure it can fail. Pair every "control absent"
    assertion with a positive control (section 2) proving the selector matches
    for a role that should have it.

@@ -7,10 +7,10 @@ can be reported with the same ID you already use in ClickUp.
 **The app source is the source of truth.** The sheets lay the groundwork - they
 say which scenarios exist, who runs them and what to look at - but they are
 written by hand, ahead of the build, and they go stale. Where a sheet and the
-code disagree about what the app *does*, **the code wins: correct the sheet,
-then write the test against the corrected version.** Never write a test against
-what a sheet wishes were true. See [Read the code first](e2e/README.md#read-the-code-first)
-in the authoring guide.
+code disagree about what the app *does*, **the code wins** — but **ask the sheet's
+owner before editing it**, then write the test against the corrected version.
+Never write a test against what a sheet wishes were true. See
+[Read the code first](e2e/README.md#read-the-code-first) in the authoring guide.
 
 Automation covers the parts a machine can judge; the rest stays manual on
 purpose (see [What is not automated](e2e/README.md#what-is-not-automated) in

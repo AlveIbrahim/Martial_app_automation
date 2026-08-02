@@ -7,9 +7,10 @@ can be reported with the same ID you already use in ClickUp.
 **The app source is the source of truth.** The sheets lay the groundwork - they
 say which scenarios exist, who runs them and what to look at - but they are
 written by hand, ahead of the build, and they go stale. Where a sheet and the
-code disagree about what the app *does*, **the code wins: correct the sheet,
-then write the test against the corrected version.** Never write a test against
-what a sheet wishes were true. See [Read the code first](#read-the-code-first).
+code disagree about what the app *does*, **the code wins** — but **ask the sheet's
+owner before editing it**, then write the test against the corrected version.
+Never write a test against what a sheet wishes were true. See
+[Read the code first](#read-the-code-first).
 
 Automation covers the parts a machine can judge; the rest stays manual on
 purpose (see [What is not automated](#what-is-not-automated)).
@@ -357,8 +358,9 @@ tests. Confirm a new one with `npm run test:setup:dev` before adding it.
    codebase; just the page component, its role guard, and the backend route's
    `checkClubAuthorization(...)`.
 2. Find the scenario in `../manual-qa/` and read its steps and expected result.
-   **Where it disagrees with the code, correct the sheet**, then write the test
-   against the corrected version.
+   **Where it disagrees with the code, stop and ask before touching the sheet** -
+   quote the code that settles it and wait for an answer. Then correct the sheet
+   and write the test against the corrected version.
 3. Look up which smoke group it belongs to in
    [`smoke_testing_scenarios.md`](smoke_testing_scenarios.md), and put it in that
    folder under `specs/smoke-testing/`. If the checklist does not list it, it
@@ -413,9 +415,16 @@ worked example - the sheet lists three settings tabs and the page renders four,
 so `Membership` was missing from the sheet entirely and the test asserts all
 four. `MEM-041` and `MEM-042` are two more; both sheets were corrected.
 
-**When the sheet is wrong, fix the sheet.** A test written to match a stale
-sheet either fails forever for no reason, or passes while asserting something
-the app does not do. Both are worse than no test.
+**When the sheet is wrong, fix the sheet — but ask first.** A test written to
+match a stale sheet either fails forever for no reason, or passes while
+asserting something the app does not do. Both are worse than no test. Editing
+the sheet is still not yours to do unilaterally: it is the human deliverable,
+someone else runs it by hand, and they may know why a row says what it says.
+Name the disagreement, quote the code, wait for an answer.
+
+The asymmetry is the point. A wrong test is loud and gets fixed. A sheet quietly
+rewritten to match a bug erases the requirement that would have caught it, and
+nobody reviews a passing test.
 
 > **The one exception, and it matters:** "the code wins" settles what the app
 > **does**, never whether that is **correct**. Where the behaviour itself is the
@@ -506,7 +515,7 @@ or only the copy around it. That single question decides everything:
 | --- | --- |
 | Behavior itself is wrong | **Leave the test RED.** Assert the behavior the app is *supposed* to have and let it fail - the red result is the bug report. Never skip it, never soften it, and never invert it to match the defect. It goes green on its own when the app is fixed. Make the failure message carry the whole story: expected, actual, `file:line` cause, and whether data is at risk. |
 | Behavior is correct, only the copy/label is broken | Let the behavioral test keep asserting behavior, tolerating the cosmetic defect, so a label cannot break an access-control result. Say out loud what is then unwatched, and record the bug in `COVERAGE.md`. |
-| The app is right and the manual sheet is wrong | Correct the sheet. If nothing is left to assert, **delete the test** rather than skipping it - write the reason in `COVERAGE.md`. See the `MEM-041` and `MEM-042` notes. |
+| The app is right and the manual sheet is wrong | **Ask before editing the sheet** - quote the code that settles it. Once agreed, correct it; if nothing is left to assert, **delete the test** rather than skipping it, and write the reason in `COVERAGE.md`. See the `MEM-041` and `MEM-042` notes. |
 
 **Do not use `test.skip` / `test.fixme` to keep a run green.** A skip hides
 whether a scenario is a known bug or simply finished, and those need very
