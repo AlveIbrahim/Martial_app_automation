@@ -397,20 +397,36 @@ not exist yet**; it is the prerequisite for this whole group.
 | `PAR-007` / `PAR-008` | Approve / deny a screen-time extension | ⬜ | `-- parent household` | Needs a pending request from `CHD-006`. |
 | `PAR-009` | Open child profile detail | ⬜ | `-- parent householdChild` | Read-only. |
 | `PAR-040` / `PAR-041` | Edge: mismatched PIN, very low limit | ⬜ | `-- parent householdChild` | Form validation, cheap to automate. |
-| `CHD-001` | Child menu is restricted | ⬜ | `-- parent portal` | Also listed under group 4. |
-| `CHD-002` | Child can use Library, Belts and Progress | ⬜ | `-- parent portal` | Read-only. |
-| `CHD-006` | Child sends a screen-time extension request | ⬜ | `-- parent portal` | Destructive. |
-| `CHD-007` | Switching back to the parent needs the PIN | ⬜ | `-- parent portal` | |
-| `CHD-040` | Hidden pages reachable by typing the URL | ⬜ | `-- parent portal` | KNOWN-GAP: verify, do not file. The "child writes are refused" half is worth asserting. |
+| `CHD-001` | Child menu is restricted | ✅ 🔴 | `-- parent household` | `child.restricted.spec.ts`. Messages and My Club are red on purpose — see the note below. Also listed under group 4. |
+| `CHD-002` | Child can use Library, Belts and Progress | ⬜ | `-- parent household` | Read-only. |
+| `CHD-006` | Child sends a screen-time extension request | ⬜ | `-- parent household` | Destructive. |
+| `CHD-007` | Switching back to the parent needs the PIN | ⬜ | `-- parent household` | Reuses `ProfileSwitchPage`, the other direction. |
+| `CHD-040` | Hidden pages reachable by typing the URL | ⬜ | `-- parent household` | KNOWN-GAP: verify, do not file. The "child writes are refused" half is worth asserting. |
 | `CR-010` | Screen-time request → parent approves | ⬜ | `-- parent household` | One account, two profiles. |
 | `PAR-006` | PIN lockout escalation | ⛔ | — *hour-long waits* | 15 / 30 / 60-minute lockouts with a 24-hour reset. No test should sit waiting an hour. |
 | `CHD-003` / `CHD-004` / `CHD-005` | Screen-time warning, lock screen, lock survives reload | ⛔ | — *real-time burn-down* | Needs the screen-time budget to burn down in real time. |
 | `CHD-041` | Clearing browser storage does not unlock | ⛔ | — *depends on the above* | Depends on the lock state above. |
 
-> **Every row here is gated on the child surface existing.** The `portal` and
-> `householdChild` keys resolve only once the parent account has a household with
-> a child profile in it — `ONB-020` then `ONB-021`. Until then codegen names the
-> scenario that creates one rather than opening a broken URL.
+> **There is no separate child URL — do not reach for the `portal` key.** Every
+> CHD row above used to name `-- parent portal`, and that was wrong in a way that
+> costs an afternoon to discover: `/portal` is a static marketing placeholder
+> (`app/portal/page.tsx` — a hero, three feature cards, and every button
+> `disabled` with "Backend integration coming soon"). It has no navigation on it
+> at all, which is what `MEM-044` means by "confirm it is still a placeholder".
+> The real child surface is **the same `/dashboard`**, re-rendered once
+> `currentProfileType` flips to `'child'`. So codegen opens the parent's
+> household page and you switch profile by hand from there.
+>
+> **Every row is still gated on the child profile existing** — `ONB-020` then
+> `ONB-021`. `householdChild` resolves only after both. The automated rows also
+> need `ROLE_PARENT_CHILD_NAME` and `ROLE_PARENT_CHILD_PIN` in `.env`: the PIN is
+> stored hashed, so unlike every other id in this suite it cannot be discovered
+> and has to be written down.
+>
+> **`CHD-001`'s red half is two real app bugs, not flakiness.** Only Support is
+> filtered on profile type; Messages and My Club are still offered to a child,
+> though the code comment directly above says otherwise. Details in
+> `manual-qa/role-child.md#CHD-001` and in the spec's own header.
 
 ---
 

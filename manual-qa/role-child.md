@@ -45,10 +45,35 @@
 **Steps:**
 | # | Action (click-by-click) | Expected result |
 |---|---|---|
-| 1 | On a phone or tablet width, look at the menu bar pinned to the bottom of the screen | It shows the child set only: Home, Library, Belts, Progress. There is no Messages item and no Support item. |
+| 1 | On a phone or tablet width, look at the menu bar pinned to the bottom of the screen | It shows Home, Calendar, Library, Payment. There is no Messages item and no Support item - but see the note below: neither is a child rule. |
 | 2 | Look for a My Club item in that bottom bar | My Club is not shown for the child, even if the household account is a club owner/teacher elsewhere. |
-| 3 | Switch to a laptop/desktop width (the menu moves to the left side of the screen) | The side menu shows the same short child list (Home, Library, Belts, Progress) and still hides Messages, Support, and My Club. |
+| 3 | Switch to a laptop/desktop width (the menu moves to the left side of the screen) | The side menu shows Home, Progress, Library and hides Messages, Support, and My Club. |
 | 4 | Open the account/avatar menu in the corner | The child sees a "Switch to Parent" button. Parent-only items (My Profile, edit profile) are not offered to the child. |
+
+> **Two corrections, applied 2026-08-02 after reading the app source** (see
+> CLAUDE.md rule 1 - where a sheet disagrees with the code, the code wins):
+>
+> 1. **There is no Belts item, for anyone.** This sheet used to expect "Home,
+>    Library, Belts, Progress" in both menus. Neither `DesktopSidebar.tsx` nor
+>    `BottomNavigation.tsx` renders a `belts` nav item for any role, so it was
+>    never a child restriction that had gone missing - it was never there.
+>    Belts is reached from Progress, and `CHD-002` covers it.
+> 2. **The phone bar's missing Messages and Support are not child rules.** That
+>    bar is a different six-item set from the sidebar for every role, dropping
+>    Messages and Progress outright; it also drops Support for any club member
+>    (`BottomNavigation.tsx` ~line 146). So on a phone those two are absent for
+>    the parent as well, and confirming them there proves nothing about the
+>    child. Step 2, My Club, is the only part of the phone check that is
+>    genuinely child-specific.
+>
+> **Known app bugs, expected to fail steps 2 and 3 today.** The code filters
+> only Support on profile type, though its own comment says otherwise:
+> `// Child profiles: hide messages and support` sits directly above
+> `if (currentProfileType === 'child' && item.nameKey === 'support') return false;`
+> (`DesktopSidebar.tsx` ~line 232, `BottomNavigation.tsx` ~line 142). Messages
+> and My Club are therefore still offered to a child. Automated as deliberately
+> red tests in `e2e/specs/smoke-testing/14-child-profile/child.restricted.spec.ts`
+> - report them against this scenario ID, do not re-file.
 
 **Screen-size check:** Confirm the restricted menu is correct in BOTH layouts: the bottom bar below the 768px boundary and the side menu above it. The boundary is where the menu moves from bottom to side.
 

@@ -259,12 +259,15 @@ list in section 6.
 
 ---
 
-## 3. Red on purpose — three open bugs
+## 3. Red on purpose — five open bugs
 
-**These three tests FAIL, and they are meant to. A red result here is the bug
+**These five tests FAIL, and they are meant to. A red result here is the bug
 report.** Do not skip them, do not soften them, and do not invert them to match
 what the app currently does — that would record a defect as intended behaviour.
 They turn green on their own when the app is fixed.
+
+They fall into two unrelated root causes: three from `userRole` (below), and two
+from the child nav filter (`CHD-001`, after this table).
 
 `SEC-043`, `SEN-042`, `SEN-044` are **one root cause**: `(authenticated)/layout.tsx` (~line 286) maps
 sensei, secretary **and** admin to `userRole: 'owner'` for the club being
@@ -284,6 +287,38 @@ screens on `clubRole` would close all three.
 
 Proving the server-side refusal needs a write, so that half belongs with the
 mutating-tests milestone.
+
+### `CHD-001` — the child nav filter is half-written
+
+A second, unrelated root cause. Both nav components carry this pair of lines,
+and the comment does not describe the code
+(`DesktopSidebar.tsx` ~line 232, `BottomNavigation.tsx` ~line 142):
+
+```ts
+// Child profiles: hide messages and support (parent-only features)
+if (currentProfileType === 'child' && item.nameKey === 'support') return false;
+```
+
+| ID | What is wrong |
+| --- | --- |
+| `CHD-001` (Messages) | A child is offered Messages. Named in the code's own comment as something to hide, and never implemented. |
+| `CHD-001` (My Club) | A child is offered My Club. Filtered on club membership (`showMyClub`), never on profile type. |
+
+**These two are not equally strong, and the difference matters if someone
+challenges them.** Messages has documented intent — the comment sitting directly
+above the line proves a developer meant to hide it. My Club rests on
+`manual-qa/role-child.md` alone. If product rules that children should see their
+club, delete that row from `WITHHELD_FROM_CHILD` rather than softening the
+assertion.
+
+**Payment is deliberately NOT asserted**, though a child being shown a payments
+link is arguably worse than either. No scenario asks for it, and inventing a
+requirement in a test file is how a suite starts encoding one author's opinion
+as fact. Raise it as a product question first — noted here so it is not lost.
+
+Verified against `dev` on 2026-08-02: `npm run test:group:dev -- 14` → **15
+passed, 2 failed**, the two being exactly these. All 3 positive controls green,
+so the absences are trustworthy.
 
 ---
 

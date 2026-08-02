@@ -105,4 +105,31 @@ export class NavigationPage extends BasePage {
       ).toBeVisible({ timeout: RENDER_TIMEOUT });
     }
   }
+
+  /** Land on the dashboard with the club role resolved, and go no further. */
+  async openDashboard(): Promise<void> {
+    await this.gotoAndAwaitClubRole(routes.dashboard);
+  }
+
+  /**
+   * Assert a sidebar destination is NOT offered.
+   *
+   * Never sufficient alone - pair every call with `expectDestinationOffered`
+   * for a role that should have it (CLAUDE.md rule 3).
+   */
+  async expectDestinationWithheld(key: NavKey, label: string, because: string): Promise<void> {
+    await expect(
+      navLocators.link(this.page, key),
+      `the sidebar offered "${label}" (data-track="nav:${key}") to a role that ` +
+        `should not have it. ${because}`,
+    ).toBeHidden({ timeout: RENDER_TIMEOUT });
+  }
+
+  /** Assert a sidebar destination IS offered. */
+  async expectDestinationOffered(key: NavKey, label: string, because: string): Promise<void> {
+    await expect(
+      navLocators.link(this.page, key),
+      `the sidebar did not offer "${label}" (data-track="nav:${key}"). ${because}`,
+    ).toBeVisible({ timeout: RENDER_TIMEOUT });
+  }
 }

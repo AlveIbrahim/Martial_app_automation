@@ -17,10 +17,11 @@ ID already used in ClickUp. The suite is **read-only** and safe against shared `
 3. **Every "control absent" check needs a positive control** proving the same
    selector matches for a role that should have it. An absence check passes
    loudest when the selector is simply wrong.
-4. **Three tests are red on purpose** — `SEC-043`, `SEN-042`, and the `SEN-044`
-   role-editor half. They report open app bugs and go green when the app is fixed.
-   Never skip, soften, or invert them. **A full run is correct when those three,
-   and only those three, fail.**
+4. **Five tests are red on purpose** — `SEC-043`, `SEN-042`, the `SEN-044`
+   role-editor half, and the `CHD-001` Messages and My Club halves. They report
+   open app bugs and go green when the app is fixed. Never skip, soften, or
+   invert them. **A full run is correct when those five, and only those five,
+   fail.** Two unrelated causes; both are written up in `COVERAGE.md` §3.
 5. **Never use `test.skip` / `fixme` to keep a run green.** A skip hides whether a
    scenario is a known bug or simply unfinished. Prefer a red test, or no test.
 6. **Use `gotoAndAwaitClubRole`, not `goto`,** whenever the assertion is about a

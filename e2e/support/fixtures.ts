@@ -7,6 +7,7 @@ import { PersonalSectionPage, type PersonalSection } from '../pages/personal-sec
 import { DashboardPage } from '../pages/dashboard.page';
 import { LoginPage } from '../pages/login.page';
 import { NavigationPage } from '../pages/navigation.page';
+import { ProfileSwitchPage } from '../pages/profile-switch.page';
 
 /**
  * The analytics consent banner is a real source of flakiness.
@@ -45,6 +46,8 @@ interface TestFixtures {
   dashboardPage: DashboardPage;
   /** The primary sidebar and the destinations it offers. */
   navigationPage: NavigationPage;
+  /** The account menu, and getting from the parent profile into a child one. */
+  profileSwitchPage: ProfileSwitchPage;
   /**
    * The login form. Only the authentication specs need this - every other test
    * gets its session from setup/auth.setup.ts via `asRole(...)`.
@@ -119,6 +122,10 @@ export const test = base.extend<TestFixtures, WorkerFixtures>({
 
   navigationPage: async ({ page }, use) => {
     await use(new NavigationPage(page));
+  },
+
+  profileSwitchPage: async ({ page }, use) => {
+    await use(new ProfileSwitchPage(page));
   },
 
   loginPage: async ({ page }, use) => {

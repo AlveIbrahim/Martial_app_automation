@@ -79,6 +79,40 @@ export const ACCESS_CONTROL_ROLES: RoleKey[] = [
  */
 export const SESSION_ROLES: RoleKey[] = [...ACCESS_CONTROL_ROLES, 'parent'];
 
+/**
+ * The child profile inside the parent account's household (group 14).
+ *
+ * NOT a role, and deliberately not in ROLES: a child has no login of its own.
+ * It is reached by signing in as `parent` and switching profile with this PIN,
+ * which mints a second set of cookies over the same session
+ * (ProfileContext.tsx ~line 75). So there is no session file to save and
+ * nothing for auth.setup.ts to do here.
+ *
+ * THE PIN CANNOT BE DISCOVERED. Every other id this suite needs is looked up
+ * from the API at run time, on purpose. This one cannot be: it is stored
+ * hashed, and the only endpoint that takes it is the switch itself. It is the
+ * single piece of test data that must be written down, and it must match the
+ * child profile created by ONB-021 in the target environment.
+ */
+export const CHILD_PROFILE = {
+  /** Shown on the profile card in the switch dialog, and matched by name. */
+  name: process.env.ROLE_PARENT_CHILD_NAME ?? '',
+  pin: process.env.ROLE_PARENT_CHILD_PIN ?? '',
+} as const;
+
+export function assertChildProfilePresent(): { name: string; pin: string } {
+  if (!CHILD_PROFILE.name || !CHILD_PROFILE.pin) {
+    throw new Error(
+      `Missing child profile details.\n` +
+        `Set ROLE_PARENT_CHILD_NAME and ROLE_PARENT_CHILD_PIN in .env.\n` +
+        `They must match a child profile that already exists in the ` +
+        `parent account's household - create one with ONB-020 then ONB-021 ` +
+        `(npm run codegen:dev -- parent household).`,
+    );
+  }
+  return { name: CHILD_PROFILE.name, pin: CHILD_PROFILE.pin };
+}
+
 export function assertCredentialsPresent(role: RoleKey): RoleCredentials {
   const creds = ROLES[role];
   if (!creds.email) {
